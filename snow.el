@@ -1,4 +1,7 @@
- ;; -*- lexical-binding: t; -*-
+;; -*- lexical-binding: t; -*-
+
+(require 'cl-lib)
+(require 'color)
 
 (defvar snowflakes-flakes nil)
 
@@ -17,12 +20,16 @@
 (cl-defstruct snowflake
   x y mass char)
 
+(defsubst snowflake-color (mass)
+  (let ((raw (/ (+ mass 155) 255)))
+    (color-rgb-to-hex raw raw raw 2)))
+
 (defun snowflake-get-flake (z)
   (propertize (pcase z
-                ((pred (< 90)) "❄")
-                ((pred (< 50)) "*")
-                (_ "."))
-              'face 'snowflakes-face))
+                ((pred (< 90)) (propertize "❄" 'face (list :foreground (snowflake-color z))))
+                ((pred (< 50)) (propertize "*" 'face (list :foreground (snowflake-color z))))
+                ((pred (< 10)) (propertize "." 'face'(list :foreground (snowflake-color z))))
+                (_ (propertize "." 'face (list :foreground (snowflake-color z)))))))
 
 (defun snowflakes--update-buffer (buffer)
   (with-current-buffer buffer
@@ -32,7 +39,7 @@
             (append snowflakes-flakes
                     (cl-loop for i from 0 to (random snowflakes-amount)
                              for x = (random cols)
-                             for mass = (random 100)
+                             for mass = (float (random 100))
                              for flake = (make-snowflake :x x :y 0 :mass mass :char (snowflake-get-flake mass))
                              do (snowflakes-draw flake)
                              collect flake)))
