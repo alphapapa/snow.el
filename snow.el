@@ -1,9 +1,9 @@
-;; -*- lexical-binding: t; -*-
+ ;; -*- lexical-binding: t; -*-
 
 (defvar snowflakes-flakes nil)
 
 (defvar snowflakes-amount 2)
-(defvar snowflakes-rate 0.15)
+(defvar snowflakes-rate 0.125)
 (defvar snowflakes-timer nil)
 
 (defface snowflakes-face
@@ -70,8 +70,8 @@
                 " "
               (snowflake-char flake)))))
 
-(defun let-it-snow ()
-  (interactive)
+(defun let-it-snow (&optional manual)
+  (interactive "P")
   (with-current-buffer (get-buffer-create "*snow*")
     (if snowflakes-timer
         (progn
@@ -88,8 +88,13 @@
                   "\n")))
       (goto-char (point-min))
       (setq snowflakes-flakes nil)
-      (setq snowflakes-timer
-            (run-at-time nil 0.1 (apply-partially #'snowflakes--update-buffer (current-buffer))))
+      (use-local-map (make-sparse-keymap))
+      (local-set-key (kbd "SPC") (lambda ()
+                                   (interactive)
+                                   (snowflakes--update-buffer (current-buffer))))
+      (unless manual
+        (setq snowflakes-timer
+              (run-at-time nil snowflakes-rate (apply-partially #'snowflakes--update-buffer (current-buffer)))))
       (pop-to-buffer (current-buffer)))))
 
 (defun snowflakes-overlay ()
