@@ -49,7 +49,7 @@
                                                                         (0 -1)
                                                                         (1 1)))
                                          (setf (snowflake-x flake) (clamp 0 (snowflake-x flake) (1- cols))))
-                                       (when (> (random 100) (/ (snowflake-mass flake) 2))
+                                       (when (> (random 100) (/ (- 100 (snowflake-mass flake)) 3))
                                          (cl-incf (snowflake-y flake)))
                                        (unless (>= (snowflake-y flake) (1- lines))
                                          ;; Redraw flake
