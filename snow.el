@@ -42,7 +42,9 @@
                                        ;; Delete old flake
                                        (snowflakes-draw flake 'delete)
                                        ;; Move flake
-                                       (when (> (random 100) (snowflake-mass flake))
+                                       (when (and (> (random 100) (snowflake-mass flake))
+                                                  ;; Easiest way to just reduce the chance of X movement is to add another condition.
+                                                  (> (random 3) 0))
                                          (cl-incf (snowflake-x flake) (pcase (random 2)
                                                                         (0 -1)
                                                                         (1 1)))
