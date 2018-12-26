@@ -76,6 +76,7 @@
           (cancel-timer snowflakes-timer)
           (setq snowflakes-timer nil))
       ;; Start
+      (buffer-disable-undo)
       (setq-local cursor-type nil)
       (setq-local snowflakes-string (propertize snowflakes-flake 'face 'snowflakes-face))
       (erase-buffer)
