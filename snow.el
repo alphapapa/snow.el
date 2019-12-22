@@ -6,7 +6,7 @@
 (defvar snowflakes-flakes nil)
 
 (defvar snowflakes-amount 2)
-(defvar snowflakes-rate 0.125)
+(defvar snowflakes-rate 0.09)
 (defvar snowflakes-timer nil)
 
 (defface snowflakes-face
@@ -18,7 +18,11 @@
 (defvar-local snowflakes-string nil)
 
 (cl-defstruct snowflake
-  x y mass char)
+  x y mass char overlay)
+
+(defsubst clamp (min number max)
+  "Return NUMBER clamped to between MIN and MAX, inclusive."
+  (max min (min max number)))
 
 (defsubst snowflake-color (mass)
   (let ((raw (/ (+ mass 155) 255)))
@@ -46,9 +50,7 @@
       (setq snowflakes-flakes
             (cl-loop for flake in snowflakes-flakes
                      for new-flake = (progn
-                                       ;; Delete old flake
-                                       (snowflakes-draw flake 'delete)
-                                       ;; Move flake
+                                       ;; Calculate new flake position.
                                        (when (and (> (random 100) (snowflake-mass flake))
                                                   ;; Easiest way to just reduce the chance of X movement is to add another condition.
                                                   (> (random 3) 0))
@@ -58,24 +60,28 @@
                                          (setf (snowflake-x flake) (clamp 0 (snowflake-x flake) (1- cols))))
                                        (when (> (random 100) (/ (- 100 (snowflake-mass flake)) 3))
                                          (cl-incf (snowflake-y flake)))
-                                       (unless (>= (snowflake-y flake) (1- lines))
-                                         ;; Redraw flake
-                                         (snowflakes-draw flake)
-                                         ;; Return moved flake
-                                         flake))
+                                       (if (< (snowflake-y flake) (1- lines))
+                                           (progn
+                                             ;; Redraw flake
+                                             (snowflakes-draw flake)
+                                             ;; Return moved flake
+                                             flake)
+                                         ;; Flake hit end of buffer: delete overlay.
+                                         (delete-overlay (snowflake-overlay flake))))
                      when new-flake
                      collect new-flake)))
     (setq mode-line-format (format "%s flakes" (length snowflakes-flakes)))))
 
-(defun snowflakes-draw (flake &optional delete)
-  (save-excursion
-    (goto-char (point-min))
-    (forward-line (snowflake-y flake))
-    (forward-char (snowflake-x flake))
-    (delete-char 1)
-    (insert (if delete
-                " "
-              (snowflake-char flake)))))
+(defun snowflakes-draw (flake)
+  (let ((pos (save-excursion
+               (goto-char (point-min))
+               (forward-line (snowflake-y flake))
+               (forward-char (snowflake-x flake))
+               (point))))
+    (if (snowflake-overlay flake)
+        (move-overlay (snowflake-overlay flake) pos (1+ pos))
+      (setf (snowflake-overlay flake) (make-overlay pos (1+ pos)))
+      (overlay-put (snowflake-overlay flake) 'display (snowflake-char flake)))))
 
 (defun let-it-snow (&optional manual)
   (interactive "P")
@@ -92,7 +98,8 @@
       (save-excursion
         (dotimes (_i (window-text-height))
           (insert (make-string (window-text-width) ? )
-                  "\n")))
+                  "\n"))
+        (snowflakes-insert-background :start-at -1))
       (goto-char (point-min))
       (setq snowflakes-flakes nil)
       (use-local-map (make-sparse-keymap))
@@ -104,26 +111,34 @@
               (run-at-time nil snowflakes-rate (apply-partially #'snowflakes--update-buffer (current-buffer)))))
       (pop-to-buffer (current-buffer)))))
 
-(defun snowflakes-overlay ()
-  (let* ((s".      *    *           *.       *   .                      *     .
-               .   .                   __   *    .     * .     *
-    *       *         *   .     .    _|__|_        *    __   .       *
-  .  *  /\       /\          *        ('')    *       _|__|_     .
-       /  \   * /  \  *          .  <( . )> *  .       ('')   *   *
-  *    /  \     /  \   .   *       _(__.__)_  _   ,--<(  . )>  .    .
-      /    \   /    \          *   |       |  )),`   (   .  )     *
-   *   `||` ..  `||`   . *.   ... ==========='`   ... '--`-` ... * .")
-         (width (cl-loop for line in (s-lines s)
+;;;; Overlay
+
+(defcustom snow-background
+  "
+                                       __
+                                     _|__|_             __
+        /\\       /\\                   ('')            _|__|_
+       /  \\     /  \\                <( . )>            ('')
+       /  \\     /  \\               _(__.__)_  _   ,--<(  . )>
+      /    \\   /    \\              |       |  )),`   (   .  )
+       `||`     `||`               ==========='`       '--`-`          "
+  "Background string."
+  :type 'string)
+
+(cl-defun snowflakes-insert-background (&key (s snow-background) (start-at 0))
+  (let* ((lines (split-string snow-background "\n"))
+         (height (length lines))
+         (width (cl-loop for line in lines
                          maximizing (length line)))
-         (height (length (s-lines s)))
-         (x (- (window-text-width) width))
-         (y (- (window-text-height) height)))
+         (start-at (pcase start-at
+                     (-1 (- (line-number-at-pos (point-max)) height 1))
+                     (_ start-at))))
+    (cl-assert (>= (line-number-at-pos (point-max)) height))
+    (remove-overlays)
     (save-excursion
       (goto-char (point-min))
-      (forward-line (1- y))
-      (cl-loop for line in (s-lines s)
+      (forward-line start-at)
+      (cl-loop for line in lines
                do (progn
-                    (forward-line 1)
-                    ;; FIXME x
-                    ;;  (forward-char x)
-                    (ov (point) (point) 'before-string line))))))
+                    (setf (buffer-substring (point) (+ (point) (length line))) line)
+                    (forward-line 1))))))
