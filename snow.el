@@ -17,10 +17,6 @@
   '((t :foreground "white"))
   "The face.")
 
-(defvar snow-flake "*")
-
-(defvar-local snow-string nil)
-
 (cl-defstruct snowflake
   x y mass char overlay)
 
@@ -97,7 +93,6 @@
       ;; Start
       (buffer-disable-undo)
       (setq-local cursor-type nil)
-      (setq-local snow-string (propertize snow-flake 'face 'snow-face))
       (erase-buffer)
       (save-excursion
         (dotimes (_i (window-text-height))
