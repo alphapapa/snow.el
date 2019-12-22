@@ -3,19 +3,23 @@
 (require 'cl-lib)
 (require 'color)
 
-(defvar snowflakes-flakes nil)
+(defvar snow-flakes nil)
 
-(defvar snowflakes-amount 2)
-(defvar snowflakes-rate 0.09)
-(defvar snowflakes-timer nil)
+(defvar snow-amount 2)
+(defvar snow-rate 0.09)
+(defvar snow-timer nil)
 
-(defface snowflakes-face
+(defgroup snow nil
+  "Let it snow!"
+  :group 'games)
+
+(defface snow-face
   '((t :foreground "white"))
   "The face.")
 
-(defvar snowflakes-flake "*")
+(defvar snow-flake "*")
 
-(defvar-local snowflakes-string nil)
+(defvar-local snow-string nil)
 
 (cl-defstruct snowflake
   x y mass char overlay)
@@ -35,20 +39,20 @@
                 ((pred (< 10)) (propertize "." 'face'(list :foreground (snowflake-color z))))
                 (_ (propertize "." 'face (list :foreground (snowflake-color z)))))))
 
-(defun snowflakes--update-buffer (buffer)
+(defun snow--update-buffer (buffer)
   (with-current-buffer buffer
     (let ((lines (window-text-height))
           (cols (window-width)))
-      (setq snowflakes-flakes
-            (append snowflakes-flakes
-                    (cl-loop for i from 0 to (random snowflakes-amount)
+      (setq snow-flakes
+            (append snow-flakes
+                    (cl-loop for i from 0 to (random snow-amount)
                              for x = (random cols)
                              for mass = (float (random 100))
                              for flake = (make-snowflake :x x :y 0 :mass mass :char (snowflake-get-flake mass))
-                             do (snowflakes-draw flake)
+                             do (snow-draw flake)
                              collect flake)))
-      (setq snowflakes-flakes
-            (cl-loop for flake in snowflakes-flakes
+      (setq snow-flakes
+            (cl-loop for flake in snow-flakes
                      for new-flake = (progn
                                        ;; Calculate new flake position.
                                        (when (and (> (random 100) (snowflake-mass flake))
@@ -63,16 +67,16 @@
                                        (if (< (snowflake-y flake) (1- lines))
                                            (progn
                                              ;; Redraw flake
-                                             (snowflakes-draw flake)
+                                             (snow-draw flake)
                                              ;; Return moved flake
                                              flake)
                                          ;; Flake hit end of buffer: delete overlay.
                                          (delete-overlay (snowflake-overlay flake))))
                      when new-flake
                      collect new-flake)))
-    (setq mode-line-format (format "%s flakes" (length snowflakes-flakes)))))
+    (setq mode-line-format (format "%s flakes" (length snow-flakes)))))
 
-(defun snowflakes-draw (flake)
+(defun snow-draw (flake)
   (let ((pos (save-excursion
                (goto-char (point-min))
                (forward-line (snowflake-y flake))
@@ -86,29 +90,29 @@
 (defun let-it-snow (&optional manual)
   (interactive "P")
   (with-current-buffer (get-buffer-create "*snow*")
-    (if snowflakes-timer
+    (if snow-timer
         (progn
-          (cancel-timer snowflakes-timer)
-          (setq snowflakes-timer nil))
+          (cancel-timer snow-timer)
+          (setq snow-timer nil))
       ;; Start
       (buffer-disable-undo)
       (setq-local cursor-type nil)
-      (setq-local snowflakes-string (propertize snowflakes-flake 'face 'snowflakes-face))
+      (setq-local snow-string (propertize snow-flake 'face 'snow-face))
       (erase-buffer)
       (save-excursion
         (dotimes (_i (window-text-height))
           (insert (make-string (window-text-width) ? )
                   "\n"))
-        (snowflakes-insert-background :start-at -1))
+        (snow-insert-background :start-at -1))
       (goto-char (point-min))
-      (setq snowflakes-flakes nil)
+      (setq snow-flakes nil)
       (use-local-map (make-sparse-keymap))
       (local-set-key (kbd "SPC") (lambda ()
                                    (interactive)
-                                   (snowflakes--update-buffer (current-buffer))))
+                                   (snow--update-buffer (current-buffer))))
       (unless manual
-        (setq snowflakes-timer
-              (run-at-time nil snowflakes-rate (apply-partially #'snowflakes--update-buffer (current-buffer)))))
+        (setq snow-timer
+              (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (current-buffer)))))
       (pop-to-buffer (current-buffer)))))
 
 ;;;; Overlay
@@ -125,11 +129,9 @@
   "Background string."
   :type 'string)
 
-(cl-defun snowflakes-insert-background (&key (s snow-background) (start-at 0))
-  (let* ((lines (split-string snow-background "\n"))
+(cl-defun snow-insert-background (&key (s snow-background) (start-at 0))
+  (let* ((lines (split-string s "\n"))
          (height (length lines))
-         (width (cl-loop for line in lines
-                         maximizing (length line)))
          (start-at (pcase start-at
                      (-1 (- (line-number-at-pos (point-max)) height 1))
                      (_ start-at))))
