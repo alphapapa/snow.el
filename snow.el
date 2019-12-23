@@ -126,7 +126,6 @@ The lower the number, the faster snow will accumulate."
           (setq snow-timer nil))
       ;; Start
       (switch-to-buffer (current-buffer))
-      (redisplay)
       (buffer-disable-undo)
       (setq-local cursor-type nil)
       (erase-buffer)
@@ -143,7 +142,10 @@ The lower the number, the faster snow will accumulate."
                                    (snow--update-buffer (current-buffer))))
       (unless manual
         (setq snow-timer
-              (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (get-buffer-create "*snow*"))))))))
+              (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (get-buffer-create "*snow*"))))
+        (setq-local kill-buffer-hook (lambda ()
+                                       (cancel-timer snow-timer)
+                                       (setq snow-timer nil)))))))
 
 ;;;; Background
 
