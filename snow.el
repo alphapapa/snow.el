@@ -13,6 +13,11 @@
   "Let it snow!"
   :group 'games)
 
+(defcustom snow-pile-factor 100
+  "Snow is reduced in mass by this factor when it hits the ground.
+The lower the number, the faster snow will accumulate."
+  :type 'number)
+
 (defface snow-face
   '((t :foreground "white"))
   "The face.")
@@ -32,7 +37,7 @@
   (propertize (pcase z
                 ((pred (< 90)) (propertize "❄" 'face (list :foreground (snowflake-color z))))
                 ((pred (< 50)) (propertize "*" 'face (list :foreground (snowflake-color z))))
-                ((pred (< 10)) (propertize "." 'face'(list :foreground (snowflake-color z))))
+                ((pred (< 10)) (propertize "." 'face (list :foreground (snowflake-color z))))
                 (_ (propertize "." 'face (list :foreground (snowflake-color z)))))))
 
 (defun snow--update-buffer (buffer)
@@ -45,7 +50,7 @@
                              for x = (random cols)
                              for mass = (float (random 100))
                              for flake = (make-snowflake :x x :y 0 :mass mass :char (snowflake-get-flake mass))
-                             do (snow-draw flake)
+                             do (snowflake-draw flake)
                              collect flake)))
       (setq snow-flakes
             (cl-loop for flake in snow-flakes
@@ -63,16 +68,45 @@
                                        (if (< (snowflake-y flake) (1- lines))
                                            (progn
                                              ;; Redraw flake
-                                             (snow-draw flake)
+                                             (snowflake-draw flake)
                                              ;; Return moved flake
                                              flake)
                                          ;; Flake hit end of buffer: delete overlay.
-                                         (delete-overlay (snowflake-overlay flake))))
+                                         (delete-overlay (snowflake-overlay flake))
+                                         (snow-pile flake)
+                                         nil))
                      when new-flake
                      collect new-flake)))
     (setq mode-line-format (format "%s flakes" (length snow-flakes)))))
 
-(defun snow-draw (flake)
+(defun snowflake-pos (flake)
+  (save-excursion
+    (goto-char (point-min))
+    (forward-line (snowflake-y flake))
+    (forward-char (snowflake-x flake))
+    (point)))
+
+(defun snow-pile (flake)
+  (cl-labels ((landed-at (flake)
+                         (let* ((pos (snowflake-pos flake))
+                                (mass (or (get-text-property pos 'snow) 0)))
+                           (pcase mass
+                             ((pred (< 10))
+                              (cl-decf (snowflake-y flake))
+                              (landed-at flake))
+                             (_ (list pos mass))))))
+    (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake))
+                 (ground-snow-mass (+ ground-snow-mass (/ (snowflake-mass flake) snow-pile-factor)))
+                 (ground-snow-string (pcase ground-snow-mass
+                                       ((pred (< 90)) (propertize "❄" 'face (list :foreground (snowflake-color ground-snow-mass))))
+                                       ((pred (< 50)) (propertize "*" 'face (list :foreground (snowflake-color ground-snow-mass))))
+                                       ((pred (< 10)) (propertize "." 'face (list :foreground (snowflake-color ground-snow-mass)))))))
+      (put-text-property pos (1+ pos) 'snow ground-snow-mass)
+      (when (and ground-snow-string
+                 (not (equal (char-to-string (char-after pos)) ground-snow-string)))
+        (setf (buffer-substring pos (1+ pos)) ground-snow-string)))))
+
+(defun snowflake-draw (flake)
   (let ((pos (save-excursion
                (goto-char (point-min))
                (forward-line (snowflake-y flake))
@@ -110,7 +144,7 @@
               (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (current-buffer)))))
       (pop-to-buffer (current-buffer)))))
 
-;;;; Overlay
+;;;; Background
 
 (defcustom snow-background
   #("                                       __                                                                                             
