@@ -42,8 +42,8 @@ The lower the number, the faster snow will accumulate."
 
 (defun snow--update-buffer (buffer)
   (with-current-buffer buffer
-    (let ((lines (window-text-height))
-          (cols (window-width)))
+    (let ((lines (window-text-height (get-buffer-window buffer t)))
+          (cols (window-width (get-buffer-window buffer t))))
       (setq snow-flakes
             (append snow-flakes
                     (cl-loop for i from 0 to (random snow-amount)
@@ -72,8 +72,8 @@ The lower the number, the faster snow will accumulate."
                                              ;; Return moved flake
                                              flake)
                                          ;; Flake hit end of buffer: delete overlay.
-                                         (delete-overlay (snowflake-overlay flake))
                                          (snow-pile flake)
+                                         (delete-overlay (snowflake-overlay flake))
                                          nil))
                      when new-flake
                      collect new-flake)))
@@ -89,22 +89,22 @@ The lower the number, the faster snow will accumulate."
 (defun snow-pile (flake)
   (cl-labels ((landed-at (flake)
                          (let* ((pos (snowflake-pos flake))
-                                (mass (or (get-text-property pos 'snow) 0)))
+                                (mass (or (get-text-property pos 'snow (current-buffer)) 0)))
                            (pcase mass
-                             ((pred (< 10))
+                             ((pred (< 100))
                               (cl-decf (snowflake-y flake))
                               (landed-at flake))
                              (_ (list pos mass))))))
     (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake))
                  (ground-snow-mass (+ ground-snow-mass (/ (snowflake-mass flake) snow-pile-factor)))
                  (ground-snow-string (pcase ground-snow-mass
+                                       ((pred (<= 100)) (propertize "❄" 'face (list :foreground (snowflake-color 100))))
                                        ((pred (< 90)) (propertize "❄" 'face (list :foreground (snowflake-color ground-snow-mass))))
                                        ((pred (< 50)) (propertize "*" 'face (list :foreground (snowflake-color ground-snow-mass))))
                                        ((pred (< 10)) (propertize "." 'face (list :foreground (snowflake-color ground-snow-mass)))))))
-      (put-text-property pos (1+ pos) 'snow ground-snow-mass)
-      (when (and ground-snow-string
-                 (not (equal (char-to-string (char-after pos)) ground-snow-string)))
-        (setf (buffer-substring pos (1+ pos)) ground-snow-string)))))
+      (when (and ground-snow-string)
+        (setf (buffer-substring pos (1+ pos)) ground-snow-string))
+      (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
 
 (defun snowflake-draw (flake)
   (let ((pos (save-excursion
@@ -125,12 +125,14 @@ The lower the number, the faster snow will accumulate."
           (cancel-timer snow-timer)
           (setq snow-timer nil))
       ;; Start
+      (switch-to-buffer (current-buffer))
+      (redisplay)
       (buffer-disable-undo)
       (setq-local cursor-type nil)
       (erase-buffer)
       (save-excursion
-        (dotimes (_i (window-text-height))
-          (insert (make-string (window-text-width) ? )
+        (dotimes (_i (window-text-height (get-buffer-window (current-buffer) t)))
+          (insert (make-string (window-text-width (get-buffer-window (current-buffer) t)) ? )
                   "\n"))
         (snow-insert-background :start-at -1))
       (goto-char (point-min))
@@ -141,8 +143,7 @@ The lower the number, the faster snow will accumulate."
                                    (snow--update-buffer (current-buffer))))
       (unless manual
         (setq snow-timer
-              (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (current-buffer)))))
-      (pop-to-buffer (current-buffer)))))
+              (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (get-buffer-create "*snow*"))))))))
 
 ;;;; Background
 
