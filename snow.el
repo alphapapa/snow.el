@@ -102,7 +102,7 @@ The lower the number, the faster snow will accumulate."
                                        ((pred (< 90)) (propertize "❄" 'face (list :foreground (snow-flake-color ground-snow-mass))))
                                        ((pred (< 50)) (propertize "*" 'face (list :foreground (snow-flake-color ground-snow-mass))))
                                        ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color ground-snow-mass)))))))
-      (when (and ground-snow-string)
+      (when ground-snow-string
         (setf (buffer-substring pos (1+ pos)) ground-snow-string))
       (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
 
