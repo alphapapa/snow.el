@@ -22,23 +22,23 @@ The lower the number, the faster snow will accumulate."
   '((t :foreground "white"))
   "The face.")
 
-(cl-defstruct snowflake
+(cl-defstruct snow-flake
   x y mass char overlay)
 
 (defsubst clamp (min number max)
   "Return NUMBER clamped to between MIN and MAX, inclusive."
   (max min (min max number)))
 
-(defsubst snowflake-color (mass)
+(defsubst snow-flake-color (mass)
   (let ((raw (/ (+ mass 155) 255)))
     (color-rgb-to-hex raw raw raw 2)))
 
-(defun snowflake-get-flake (z)
+(defun snow-flake-get-flake (z)
   (pcase z
-    ((pred (< 90)) (propertize "❄" 'face (list :foreground (snowflake-color z))))
-    ((pred (< 50)) (propertize "*" 'face (list :foreground (snowflake-color z))))
-    ((pred (< 10)) (propertize "." 'face (list :foreground (snowflake-color z))))
-    (_ (propertize "." 'face (list :foreground (snowflake-color z))))))
+    ((pred (< 90)) (propertize "❄" 'face (list :foreground (snow-flake-color z))))
+    ((pred (< 50)) (propertize "*" 'face (list :foreground (snow-flake-color z))))
+    ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color z))))
+    (_ (propertize "." 'face (list :foreground (snow-flake-color z))))))
 
 (defun snow--update-buffer (buffer)
   (with-current-buffer buffer
@@ -49,73 +49,73 @@ The lower the number, the faster snow will accumulate."
                     (cl-loop for i from 0 to (random snow-amount)
                              for x = (random cols)
                              for mass = (float (random 100))
-                             for flake = (make-snowflake :x x :y 0 :mass mass :char (snowflake-get-flake mass))
-                             do (snowflake-draw flake)
+                             for flake = (make-snow-flake :x x :y 0 :mass mass :char (snow-flake-get-flake mass))
+                             do (snow-flake-draw flake)
                              collect flake)))
       (setq snow-flakes
             (cl-loop for flake in snow-flakes
                      for new-flake = (progn
                                        ;; Calculate new flake position.
-                                       (when (and (> (random 100) (snowflake-mass flake))
+                                       (when (and (> (random 100) (snow-flake-mass flake))
                                                   ;; Easiest way to just reduce the chance of X movement is to add another condition.
                                                   (> (random 3) 0))
-                                         (cl-incf (snowflake-x flake) (pcase (random 2)
+                                         (cl-incf (snow-flake-x flake) (pcase (random 2)
                                                                         (0 -1)
                                                                         (1 1)))
-                                         (setf (snowflake-x flake) (clamp 0 (snowflake-x flake) (1- cols))))
-                                       (when (> (random 100) (/ (- 100 (snowflake-mass flake)) 3))
-                                         (cl-incf (snowflake-y flake)))
-                                       (if (< (snowflake-y flake) (1- lines))
+                                         (setf (snow-flake-x flake) (clamp 0 (snow-flake-x flake) (1- cols))))
+                                       (when (> (random 100) (/ (- 100 (snow-flake-mass flake)) 3))
+                                         (cl-incf (snow-flake-y flake)))
+                                       (if (< (snow-flake-y flake) (1- lines))
                                            (progn
                                              ;; Redraw flake
-                                             (snowflake-draw flake)
+                                             (snow-flake-draw flake)
                                              ;; Return moved flake
                                              flake)
                                          ;; Flake hit end of buffer: delete overlay.
                                          (snow-pile flake)
-                                         (delete-overlay (snowflake-overlay flake))
+                                         (delete-overlay (snow-flake-overlay flake))
                                          nil))
                      when new-flake
                      collect new-flake)))
     (setq mode-line-format (format "%s flakes" (length snow-flakes)))))
 
-(defun snowflake-pos (flake)
+(defun snow-flake-pos (flake)
   (save-excursion
     (goto-char (point-min))
-    (forward-line (snowflake-y flake))
-    (forward-char (snowflake-x flake))
+    (forward-line (snow-flake-y flake))
+    (forward-char (snow-flake-x flake))
     (point)))
 
 (defun snow-pile (flake)
   (cl-labels ((landed-at (flake)
-                         (let* ((pos (snowflake-pos flake))
+                         (let* ((pos (snow-flake-pos flake))
                                 (mass (or (get-text-property pos 'snow (current-buffer)) 0)))
                            (pcase mass
                              ((pred (< 100))
-                              (cl-decf (snowflake-y flake))
+                              (cl-decf (snow-flake-y flake))
                               (landed-at flake))
                              (_ (list pos mass))))))
     (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake))
-                 (ground-snow-mass (+ ground-snow-mass (/ (snowflake-mass flake) snow-pile-factor)))
+                 (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
                  (ground-snow-string (pcase ground-snow-mass
-                                       ((pred (<= 100)) (propertize "❄" 'face (list :foreground (snowflake-color 100))))
-                                       ((pred (< 90)) (propertize "❄" 'face (list :foreground (snowflake-color ground-snow-mass))))
-                                       ((pred (< 50)) (propertize "*" 'face (list :foreground (snowflake-color ground-snow-mass))))
-                                       ((pred (< 10)) (propertize "." 'face (list :foreground (snowflake-color ground-snow-mass)))))))
+                                       ((pred (<= 100)) (propertize "❄" 'face (list :foreground (snow-flake-color 100))))
+                                       ((pred (< 90)) (propertize "❄" 'face (list :foreground (snow-flake-color ground-snow-mass))))
+                                       ((pred (< 50)) (propertize "*" 'face (list :foreground (snow-flake-color ground-snow-mass))))
+                                       ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color ground-snow-mass)))))))
       (when (and ground-snow-string)
         (setf (buffer-substring pos (1+ pos)) ground-snow-string))
       (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
 
-(defun snowflake-draw (flake)
+(defun snow-flake-draw (flake)
   (let ((pos (save-excursion
                (goto-char (point-min))
-               (forward-line (snowflake-y flake))
-               (forward-char (snowflake-x flake))
+               (forward-line (snow-flake-y flake))
+               (forward-char (snow-flake-x flake))
                (point))))
-    (if (snowflake-overlay flake)
-        (move-overlay (snowflake-overlay flake) pos (1+ pos))
-      (setf (snowflake-overlay flake) (make-overlay pos (1+ pos)))
-      (overlay-put (snowflake-overlay flake) 'display (snowflake-char flake)))))
+    (if (snow-flake-overlay flake)
+        (move-overlay (snow-flake-overlay flake) pos (1+ pos))
+      (setf (snow-flake-overlay flake) (make-overlay pos (1+ pos)))
+      (overlay-put (snow-flake-overlay flake) 'display (snow-flake-char flake)))))
 
 (defun let-it-snow (&optional manual)
   (interactive "P")
