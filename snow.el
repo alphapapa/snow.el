@@ -34,11 +34,11 @@ The lower the number, the faster snow will accumulate."
     (color-rgb-to-hex raw raw raw 2)))
 
 (defun snowflake-get-flake (z)
-  (propertize (pcase z
-                ((pred (< 90)) (propertize "❄" 'face (list :foreground (snowflake-color z))))
-                ((pred (< 50)) (propertize "*" 'face (list :foreground (snowflake-color z))))
-                ((pred (< 10)) (propertize "." 'face (list :foreground (snowflake-color z))))
-                (_ (propertize "." 'face (list :foreground (snowflake-color z)))))))
+  (pcase z
+    ((pred (< 90)) (propertize "❄" 'face (list :foreground (snowflake-color z))))
+    ((pred (< 50)) (propertize "*" 'face (list :foreground (snowflake-color z))))
+    ((pred (< 10)) (propertize "." 'face (list :foreground (snowflake-color z))))
+    (_ (propertize "." 'face (list :foreground (snowflake-color z))))))
 
 (defun snow--update-buffer (buffer)
   (with-current-buffer buffer
