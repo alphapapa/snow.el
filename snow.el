@@ -26,6 +26,11 @@
 ;; string, otherwise the text-properties will become corrupted and
 ;; cause an error on load.
 
+;;; Notes:
+
+;; TODO: Add a fireplace and window panes looking out on the snowy
+;; scene.  See <https://github.com/johanvts/emacs-fireplace>.
+
 ;;; Code:
 
 ;;;; Requirements
