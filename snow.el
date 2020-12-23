@@ -231,11 +231,22 @@ snow, displayed with these characters."
                                            collect flake))))
       (setq snow-flakes
             (cl-loop for flake in snow-flakes
-                     for new-flake = (progn
+                     for new-flake = (cl-labels ((flake-landed-at
+                                                  (flake) (or (when (>= (snow-flake-y flake) (1- lines))
+                                                                (if (flake-within-sides-p flake)
+								    (snow-flake-pos flake)
+								  t))
+                                                              (when-let ((pos-below (snow-flake-pos-below flake)))
+                                                                (when (and (flake-within-sides-p flake)
+                                                                           (not (equal ?  (char-after pos-below))))
+                                                                  pos-below))))
+                                                 (flake-within-sides-p
+                                                  (flake) (and (<= 0 (snow-flake-x flake))
+                                                               (< (snow-flake-x flake) (- cols 2)))))
                                        ;; Calculate new flake position.
-				       (unless (zerop snow-storm-wind)
-					 ;; Wind.
-					 (when (<= (cl-random snow-storm-wind-max) (abs snow-storm-wind))
+                                       (unless (zerop snow-storm-wind)
+                                         ;; Wind.
+                                         (when (<= (cl-random snow-storm-wind-max) (abs snow-storm-wind))
                                            (cl-incf (snow-flake-x flake) (round (copysign 1.0 snow-storm-wind)))))
                                        (when (and (> (random 100) (snow-flake-mass flake))
                                                   ;; Easiest way to just reduce the chance of X movement is to add another condition.
@@ -246,19 +257,19 @@ snow, displayed with these characters."
                                                                          (1 1))))
                                        (when (> (random 100) (/ (- 100 (snow-flake-mass flake)) 3))
                                          (cl-incf (snow-flake-y flake)))
-                                       (if (< (snow-flake-y flake) (1- lines))
+                                       (if-let ((landed-at (flake-landed-at flake)))
                                            (progn
-                                             ;; Redraw flake
-                                             (snow-flake-draw flake cols)
-                                             ;; Return moved flake
-                                             flake)
-                                         ;; Flake hit end of buffer: delete overlay.
-                                         (unless (or (< (snow-flake-x flake) 0)
-						     (> (snow-flake-x flake) (- cols 2)))
-					   (snow-pile flake))
-                                         (when (snow-flake-overlay flake)
-					   (delete-overlay (snow-flake-overlay flake)))
-                                         nil))
+                                             ;; Flake hit end of buffer: delete overlay.
+                                             (when (numberp landed-at)
+                                               (snow-pile flake landed-at))
+                                             (when (snow-flake-overlay flake)
+                                               (delete-overlay (snow-flake-overlay flake)))
+                                             nil)
+                                         (progn
+                                           ;; Redraw flake
+                                           (snow-flake-draw flake cols)
+                                           ;; Return moved flake
+                                           flake)))
                      when new-flake
                      collect new-flake)))
     (when snow-debug
@@ -272,27 +283,35 @@ snow, displayed with these characters."
     (forward-char (snow-flake-x flake))
     (point)))
 
-(defun snow-pile (flake)
-  (cl-labels ((landed-at (flake)
-                         (let* ((pos (snow-flake-pos flake))
-                                (mass (or (get-text-property pos 'snow (current-buffer)) 0)))
+(defun snow-flake-pos-below (flake)
+  (save-excursion
+    (goto-char (snow-flake-pos flake))
+    (or (ignore-errors
+	  (let ((col (current-column)))
+	    (forward-line 1)
+	    (forward-char col)
+	    (point)))
+	(snow-flake-pos flake))))
+
+(defun snow-pile (flake pos)
+  (cl-labels ((landed-at (flake pos)
+                         (let* ((mass (or (get-text-property pos 'snow (current-buffer)) 0)))
                            (pcase mass
                              ((pred (< 100))
-                              (cl-decf (snow-flake-y flake))
-                              (landed-at flake))
+                              (snow-flake-pos flake))
                              (_ (list pos mass))))))
-    (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake))
-                 (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
-                 (char (alist-get (/ ground-snow-mass 100) snow-pile-strings
+    (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake pos))
+		 (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
+		 (char (alist-get (/ ground-snow-mass 100) snow-pile-strings
 				  (alist-get 1.0 snow-pile-strings nil nil
 					     (lambda (char-cell mass)
 					       (<= mass char-cell)))
 				  nil (lambda (char-cell mass)
 					(<= mass char-cell))))
-                 (color (pcase ground-snow-mass
-                          ((pred (<= 100)) (snow-flake-color 100))
-                          (_ (snow-flake-color ground-snow-mass))))
-                 (ground-snow-string (propertize char 'face (list :foreground color))))
+		 (color (pcase ground-snow-mass
+			  ((pred (<= 100)) (snow-flake-color 100))
+			  (_ (snow-flake-color ground-snow-mass))))
+		 (ground-snow-string (propertize char 'face (list :foreground color))))
       (when ground-snow-string
         (setf (buffer-substring pos (1+ pos)) ground-snow-string))
       (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
