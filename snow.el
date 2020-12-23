@@ -61,6 +61,10 @@ The lower the number, the faster snow will accumulate."
   '((t :foreground "white"))
   "The face.")
 
+(defcustom snow-show-background t
+  "Show the `snow-background' scene."
+  :type 'boolean)
+
 (defcustom snow-background
   #("                                       __                                                                                             
                                      _|__|_             __                                                                            
@@ -91,7 +95,8 @@ The lower the number, the faster snow will accumulate."
         (dotimes (_i (window-text-height (get-buffer-window (current-buffer) t)))
           (insert (make-string (window-text-width (get-buffer-window (current-buffer) t)) ? )
                   "\n"))
-        (snow-insert-background :start-at -1))
+        (when snow-show-background
+          (snow-insert-background :start-at -1)))
       (goto-char (point-min))
       (setq snow-flakes nil)
       (use-local-map (make-sparse-keymap))
