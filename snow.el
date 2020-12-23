@@ -236,9 +236,9 @@ snow, displayed with these characters."
                                                                 (if (flake-within-sides-p flake)
 								    (snow-flake-pos flake)
 								  t))
-                                                              (when-let ((pos-below (snow-flake-pos-below flake)))
-                                                                (when (and (flake-within-sides-p flake)
-                                                                           (not (equal ?  (char-after pos-below))))
+                                                              (when-let ((pos-below (when (flake-within-sides-p flake)
+                                                                                      (snow-flake-pos-below flake))))
+                                                                (when (not (equal ?  (char-after pos-below)))
                                                                   pos-below))))
                                                  (flake-within-sides-p
                                                   (flake) (and (<= 0 (snow-flake-x flake))
