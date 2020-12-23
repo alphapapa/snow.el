@@ -83,6 +83,24 @@ The lower the number, the faster snow will accumulate."
   "Background string."
   :type 'string)
 
+(defcustom snow-pile-strings
+  '((0.0 . " ")
+    (0.03125 . ".")
+    (0.0625 . "_")
+    (0.125 . "▁")
+    (0.25 . "▂")
+    (0.375 . "▃")
+    (0.5 . "▄")
+    (0.625 . "▅")
+    (0.75 . "▆")
+    (0.875 . "▇")
+    (1.0 . "█"))
+  "Alist mapping snow pile percentages to characters.
+Each position in the buffer may have an accumulated amount of
+snow, displayed with these characters."
+  :type '(alist :key-type float
+                :value-type character))
+
 ;;;; Commands
 
 (defun let-it-snow (&optional manual)
@@ -195,11 +213,13 @@ The lower the number, the faster snow will accumulate."
                              (_ (list pos mass))))))
     (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake))
                  (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
-                 (ground-snow-string (pcase ground-snow-mass
-                                       ((pred (<= 100)) (propertize "❄" 'face (list :foreground (snow-flake-color 100))))
-                                       ((pred (< 90)) (propertize "❄" 'face (list :foreground (snow-flake-color ground-snow-mass))))
-                                       ((pred (< 50)) (propertize "*" 'face (list :foreground (snow-flake-color ground-snow-mass))))
-                                       ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color ground-snow-mass)))))))
+                 (char (alist-get (/ ground-snow-mass 100) snow-pile-strings nil nil
+                                  (lambda (char-cell mass)
+                                    (<= mass char-cell))))
+                 (color (pcase ground-snow-mass
+                          ((pred (<= 100)) (snow-flake-color 100))
+                          (_ (snow-flake-color ground-snow-mass))))
+                 (ground-snow-string (propertize char 'face (list :foreground color))))
       (when ground-snow-string
         (setf (buffer-substring pos (1+ pos)) ground-snow-string))
       (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
