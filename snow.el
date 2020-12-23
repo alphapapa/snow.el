@@ -54,6 +54,7 @@
 
 (defvar snow-storm-frames nil)
 (defvar snow-storm-factor 1)
+(defvar snow-storm-wind 0)
 
 ;;;; Customization
 
@@ -112,6 +113,10 @@ snow, displayed with these characters."
   "Begin snowing at this intensity."
   :type 'float)
 
+(defcustom snow-storm-wind-max 0.3
+  "Maximum wind velocity."
+  :type 'float)
+
 ;;;; Commands
 
 (defun let-it-snow (&optional manual)
@@ -136,7 +141,8 @@ snow, displayed with these characters."
       (goto-char (point-min))
       (setf snow-flakes nil
 	    snow-storm-factor snow-storm-initial-factor
-	    snow-storm-frames 0)
+	    snow-storm-frames 0
+	    snow-storm-wind 0)
       (use-local-map (make-sparse-keymap))
       (local-set-key (kbd "SPC") (lambda ()
                                    (interactive)
@@ -169,8 +175,6 @@ snow, displayed with these characters."
     ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color z))))
     (_ (propertize "." 'face (list :foreground (snow-flake-color z))))))
 
-
-
 (defun snow--update-buffer (buffer)
   (with-current-buffer buffer
     (when (>= (cl-incf snow-storm-frames) snow-storm-interval)
@@ -179,6 +183,11 @@ snow, displayed with these characters."
 					(if (zerop (random 2))
 					    -0.1 0.1))
 				     2)
+	    snow-storm-wind (clamp (- snow-storm-wind-max)
+				   (+ snow-storm-wind
+				      (if (zerop (random 2))
+					  -0.05 0.05))
+				   snow-storm-wind-max)
 	    snow-storm-frames 0))
     (let ((lines (window-text-height (get-buffer-window buffer t)))
           (cols (window-width (get-buffer-window buffer t)))
@@ -196,13 +205,18 @@ snow, displayed with these characters."
             (cl-loop for flake in snow-flakes
                      for new-flake = (progn
                                        ;; Calculate new flake position.
+				       (unless (zerop snow-storm-wind)
+					 ;; Wind.
+					 (when (<= (cl-random snow-storm-wind-max) (abs snow-storm-wind))
+                                           (cl-incf (snow-flake-x flake) (round (copysign 1.0 snow-storm-wind)))))
                                        (when (and (> (random 100) (snow-flake-mass flake))
                                                   ;; Easiest way to just reduce the chance of X movement is to add another condition.
                                                   (> (random 3) 0))
+					 ;; Random floatiness.
                                          (cl-incf (snow-flake-x flake) (pcase (random 2)
                                                                          (0 -1)
-                                                                         (1 1)))
-                                         (setf (snow-flake-x flake) (clamp 0 (snow-flake-x flake) (1- cols))))
+                                                                         (1 1))) )
+				       (setf (snow-flake-x flake) (clamp 0 (snow-flake-x flake) (1- cols)))
                                        (when (> (random 100) (/ (- 100 (snow-flake-mass flake)) 3))
                                          (cl-incf (snow-flake-y flake)))
                                        (if (< (snow-flake-y flake) (1- lines))
@@ -217,8 +231,8 @@ snow, displayed with these characters."
                                          nil))
                      when new-flake
                      collect new-flake)))
-    (setq mode-line-format (format "Flakes:%s  Frames:%s  Factor:%s"
-				   (length snow-flakes) snow-storm-frames snow-storm-factor))))
+    (setq mode-line-format (format "Flakes:%s  Frames:%s  Factor:%s  Wind:%s"
+				   (length snow-flakes) snow-storm-frames snow-storm-factor snow-storm-wind))))
 
 (defun snow-flake-pos (flake)
   (save-excursion
