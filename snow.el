@@ -109,9 +109,11 @@ snow, displayed with these characters."
   "Ebb or flow the storm every this many frames."
   :type 'integer)
 
-(defcustom snow-storm-initial-factor 0.1
+(defcustom snow-storm-initial-factor
+  (lambda ()
+    (cl-random 1.0))
   "Begin snowing at this intensity."
-  :type 'float)
+  :type '(choice number function))
 
 (defcustom snow-storm-wind-max 0.3
   "Maximum wind velocity."
@@ -140,7 +142,9 @@ snow, displayed with these characters."
           (snow-insert-background :start-at -1)))
       (goto-char (point-min))
       (setf snow-flakes nil
-	    snow-storm-factor snow-storm-initial-factor
+	    snow-storm-factor (cl-etypecase snow-storm-initial-factor
+				(function (funcall snow-storm-initial-factor))
+				(number snow-storm-initial-factor))
 	    snow-storm-frames 0
 	    snow-storm-wind 0)
       (use-local-map (make-sparse-keymap))
