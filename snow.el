@@ -347,8 +347,15 @@ snow, displayed with these characters."
 			  (_ (snow-flake-color ground-snow-mass))))
 		 (ground-snow-string (propertize char 'face (list :foreground color))))
       (when ground-snow-string
-        (setf (buffer-substring pos (1+ pos)) ground-snow-string))
+        (setf (buffer-substring pos (1+ pos)) (snow-flake-compose (buffer-substring pos (1+ pos))
+								  ground-snow-string)))
       (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
+
+(defun snow-flake-compose (a b)
+  (with-temp-buffer
+    (insert a b)
+    (compose-region (point-min) (point-max))
+    (buffer-string)))
 
 (defun snow-flake-draw (flake max-x)
   (let ((pos (unless (or (< (snow-flake-x flake) 0)
