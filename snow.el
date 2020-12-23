@@ -95,6 +95,7 @@ The lower the number, the faster snow will accumulate."
       ;; Start
       (switch-to-buffer (current-buffer))
       (buffer-disable-undo)
+      (toggle-truncate-lines 1)
       (setq-local cursor-type nil)
       (erase-buffer)
       (save-excursion
