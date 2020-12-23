@@ -66,6 +66,10 @@
   "Let it snow!"
   :group 'games)
 
+(defcustom snow-debug nil
+  "Show debug info in mode line."
+  :type 'boolean)
+
 (defcustom snow-pile-factor 100
   "Snow is reduced in mass by this factor when it hits the ground.
 The lower the number, the faster snow will accumulate."
@@ -257,8 +261,9 @@ snow, displayed with these characters."
                                          nil))
                      when new-flake
                      collect new-flake)))
-    (setq mode-line-format (format "Flakes:%s  Frames:%s  Factor:%s  Wind:%s"
-				   (length snow-flakes) snow-storm-frames snow-storm-factor snow-storm-wind))))
+    (when snow-debug
+      (setq mode-line-format (format "Flakes:%s  Frames:%s  Factor:%s  Wind:%s"
+                                     (length snow-flakes) snow-storm-frames snow-storm-factor snow-storm-wind)))))
 
 (defun snow-flake-pos (flake)
   (save-excursion
