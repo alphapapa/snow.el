@@ -327,6 +327,12 @@ snow, displayed with these characters."
 	    (point)))
 	(snow-flake-pos flake))))
 
+(defsubst snow-pos-after (pos)
+  (save-excursion
+    (goto-char pos)
+    (move-point-visually 1)
+    (point)))
+
 (defun snow-pile (flake pos)
   (cl-labels ((landed-at (flake pos)
                          (let* ((mass (or (get-text-property pos 'snow (current-buffer)) 0)))
@@ -347,9 +353,10 @@ snow, displayed with these characters."
 			  (_ (snow-flake-color ground-snow-mass))))
 		 (ground-snow-string (propertize char 'face (list :foreground color))))
       (when ground-snow-string
-        (setf (buffer-substring pos (1+ pos)) (snow-flake-compose (buffer-substring pos (1+ pos))
-								  ground-snow-string)))
-      (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
+        (setf (buffer-substring pos (snow-pos-after pos))
+              (snow-flake-compose (buffer-substring pos (snow-pos-after pos))
+                                  ground-snow-string)))
+      (add-text-properties pos (snow-pos-after pos) (list 'snow ground-snow-mass) (current-buffer)))))
 
 (defun snow-flake-compose (a b)
   (with-temp-buffer
