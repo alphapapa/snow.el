@@ -53,6 +53,7 @@
 (defvar snow-timer nil)
 
 (defvar snow-storm-frames nil)
+(defvar snow-storm-reset-frame nil)
 (defvar snow-storm-factor 1)
 (defvar snow-storm-wind 0)
 
@@ -105,9 +106,11 @@ snow, displayed with these characters."
   :type '(alist :key-type float
                 :value-type character))
 
-(defcustom snow-storm-interval 100
+(defcustom snow-storm-interval
+  (lambda ()
+    (max 1 (random 100)))
   "Ebb or flow the storm every this many frames."
-  :type 'integer)
+  :type '(choice integer function))
 
 (defcustom snow-storm-initial-factor
   (lambda ()
@@ -146,7 +149,10 @@ snow, displayed with these characters."
 				(function (funcall snow-storm-initial-factor))
 				(number snow-storm-initial-factor))
 	    snow-storm-frames 0
-	    snow-storm-wind 0)
+	    snow-storm-wind 0
+            snow-storm-reset-frame (cl-etypecase snow-storm-interval
+                                     (function (funcall snow-storm-interval))
+                                     (number snow-storm-interval)))
       (use-local-map (make-sparse-keymap))
       (local-set-key (kbd "SPC") (lambda ()
                                    (interactive)
@@ -181,18 +187,21 @@ snow, displayed with these characters."
 
 (defun snow--update-buffer (buffer)
   (with-current-buffer buffer
-    (when (>= (cl-incf snow-storm-frames) snow-storm-interval)
-      (setf snow-storm-factor (clamp 0.1
-				     (+ snow-storm-factor
-					(if (zerop (random 2))
-					    -0.1 0.1))
-				     2)
-	    snow-storm-wind (clamp (- snow-storm-wind-max)
-				   (+ snow-storm-wind
-				      (if (zerop (random 2))
-					  -0.05 0.05))
-				   snow-storm-wind-max)
-	    snow-storm-frames 0))
+    (when (>= (cl-incf snow-storm-frames) snow-storm-reset-frame)
+      (setf snow-storm-reset-frame (cl-etypecase snow-storm-interval
+                                     (function (funcall snow-storm-interval))
+                                     (number snow-storm-interval))
+            snow-storm-factor (clamp 0.1
+                                     (+ snow-storm-factor
+                                        (if (zerop (random 2))
+                                            -0.1 0.1))
+                                     2)
+            snow-storm-wind (clamp (- snow-storm-wind-max)
+                                   (+ snow-storm-wind
+                                      (if (zerop (random 2))
+                                          -0.05 0.05))
+                                   snow-storm-wind-max)
+            snow-storm-frames 0))
     (let ((lines (window-text-height (get-buffer-window buffer t)))
           (cols (window-width (get-buffer-window buffer t)))
 	  (num-new-flakes (if (< (cl-random 1.0) snow-storm-factor)
