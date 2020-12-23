@@ -113,8 +113,9 @@ The lower the number, the faster snow will accumulate."
         (setq snow-timer
               (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (get-buffer-create "*snow*"))))
         (setq-local kill-buffer-hook (lambda ()
-                                       (cancel-timer snow-timer)
-                                       (setq snow-timer nil)))))))
+                                       (when snow-timer
+					 (cancel-timer snow-timer)
+					 (setq snow-timer nil))))))))
 
 ;;;; Functions
 
