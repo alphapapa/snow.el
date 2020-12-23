@@ -31,6 +31,12 @@
 ;; TODO: Add a fireplace and window panes looking out on the snowy
 ;; scene.  See <https://github.com/johanvts/emacs-fireplace>.
 
+;; FIXME: If the pixel-display-width of " " and "❄" are not the same,
+;; the columns in the buffer will dance around.  This is annoying and
+;; was hard to track down, because it doesn't make any sense for it to
+;; be the case when using a monospaced font, but apparently it can
+;; happen (e.g. with "Fantasque Sans Mono").
+
 ;;; Code:
 
 ;;;; Requirements
