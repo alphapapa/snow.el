@@ -238,9 +238,12 @@ snow, displayed with these characters."
                              (_ (list pos mass))))))
     (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake))
                  (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
-                 (char (alist-get (/ ground-snow-mass 100) snow-pile-strings nil nil
-                                  (lambda (char-cell mass)
-                                    (<= mass char-cell))))
+                 (char (alist-get (/ ground-snow-mass 100) snow-pile-strings
+				  (alist-get 1.0 snow-pile-strings nil nil
+					     (lambda (char-cell mass)
+					       (<= mass char-cell)))
+				  nil (lambda (char-cell mass)
+					(<= mass char-cell))))
                  (color (pcase ground-snow-mass
                           ((pred (<= 100)) (snow-flake-color 100))
                           (_ (snow-flake-color ground-snow-mass))))
