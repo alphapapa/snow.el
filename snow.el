@@ -145,14 +145,21 @@ snow, displayed with these characters."
           (snow-insert-background :start-at -1)))
       (goto-char (point-min))
       (setf snow-flakes nil
-	    snow-storm-factor (cl-etypecase snow-storm-initial-factor
-				(function (funcall snow-storm-initial-factor))
-				(number snow-storm-initial-factor))
-	    snow-storm-frames 0
-	    snow-storm-wind 0
+            snow-storm-factor (cl-etypecase snow-storm-initial-factor
+                                (function (funcall snow-storm-initial-factor))
+                                (number snow-storm-initial-factor))
+            snow-storm-frames 0
+            snow-storm-wind 0
             snow-storm-reset-frame (cl-etypecase snow-storm-interval
                                      (function (funcall snow-storm-interval))
-                                     (number snow-storm-interval)))
+                                     (number snow-storm-interval))
+            ;; Not sure how many of these are absolutely necessary,
+            ;; but it seems to be working now.
+            indicate-buffer-boundaries nil
+	    fringe-indicator-alist '((truncation . nil)
+				     (continuation . nil))
+	    left-fringe-width 0
+	    right-fringe-width 0)
       (use-local-map (make-sparse-keymap))
       (local-set-key (kbd "SPC") (lambda ()
                                    (interactive)
@@ -212,7 +219,7 @@ snow, displayed with these characters."
                                            for x = (random cols)
                                            for mass = (float (* snow-storm-factor (random 100)))
                                            for flake = (make-snow-flake :x x :y 0 :mass mass :char (snow-flake-get-flake mass))
-                                           do (snow-flake-draw flake)
+                                           do (snow-flake-draw flake cols)
                                            collect flake))))
       (setq snow-flakes
             (cl-loop for flake in snow-flakes
@@ -228,19 +235,21 @@ snow, displayed with these characters."
 					 ;; Random floatiness.
                                          (cl-incf (snow-flake-x flake) (pcase (random 2)
                                                                          (0 -1)
-                                                                         (1 1))) )
-				       (setf (snow-flake-x flake) (clamp 0 (snow-flake-x flake) (1- cols)))
+                                                                         (1 1))))
                                        (when (> (random 100) (/ (- 100 (snow-flake-mass flake)) 3))
                                          (cl-incf (snow-flake-y flake)))
                                        (if (< (snow-flake-y flake) (1- lines))
                                            (progn
                                              ;; Redraw flake
-                                             (snow-flake-draw flake)
+                                             (snow-flake-draw flake cols)
                                              ;; Return moved flake
                                              flake)
                                          ;; Flake hit end of buffer: delete overlay.
-                                         (snow-pile flake)
-                                         (delete-overlay (snow-flake-overlay flake))
+                                         (unless (or (< (snow-flake-x flake) 0)
+						     (> (snow-flake-x flake) (- cols 2)))
+					   (snow-pile flake))
+                                         (when (snow-flake-overlay flake)
+					   (delete-overlay (snow-flake-overlay flake)))
                                          nil))
                      when new-flake
                      collect new-flake)))
@@ -279,16 +288,21 @@ snow, displayed with these characters."
         (setf (buffer-substring pos (1+ pos)) ground-snow-string))
       (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
 
-(defun snow-flake-draw (flake)
-  (let ((pos (save-excursion
-               (goto-char (point-min))
-               (forward-line (snow-flake-y flake))
-               (forward-char (snow-flake-x flake))
-               (point))))
-    (if (snow-flake-overlay flake)
-        (move-overlay (snow-flake-overlay flake) pos (1+ pos))
-      (setf (snow-flake-overlay flake) (make-overlay pos (1+ pos)))
-      (overlay-put (snow-flake-overlay flake) 'display (snow-flake-char flake)))))
+(defun snow-flake-draw (flake max-x)
+  (let ((pos (unless (or (< (snow-flake-x flake) 0)
+			 (> (snow-flake-x flake) (1- max-x)))
+               (save-excursion
+                 (goto-char (point-min))
+                 (forward-line (snow-flake-y flake))
+                 (forward-char (snow-flake-x flake))
+                 (point)))))
+    (if pos
+        (if (snow-flake-overlay flake)
+            (move-overlay (snow-flake-overlay flake) pos (1+ pos))
+          (setf (snow-flake-overlay flake) (make-overlay pos (1+ pos)))
+          (overlay-put (snow-flake-overlay flake) 'display (snow-flake-char flake)))
+      (when (snow-flake-overlay flake)
+	(delete-overlay (snow-flake-overlay flake))))))
 
 (cl-defun snow-insert-background (&key (s snow-background) (start-at 0))
   (let* ((lines (split-string s "\n"))
