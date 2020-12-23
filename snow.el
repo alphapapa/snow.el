@@ -48,9 +48,12 @@
 
 (defvar snow-flakes nil)
 
-(defvar snow-amount 2)
+(defvar snow-amount 5)
 (defvar snow-rate 0.09)
 (defvar snow-timer nil)
+
+(defvar snow-storm-frames nil)
+(defvar snow-storm-factor 1)
 
 ;;;; Customization
 
@@ -101,6 +104,14 @@ snow, displayed with these characters."
   :type '(alist :key-type float
                 :value-type character))
 
+(defcustom snow-storm-interval 100
+  "Ebb or flow the storm every this many frames."
+  :type 'integer)
+
+(defcustom snow-storm-initial-factor 0.1
+  "Begin snowing at this intensity."
+  :type 'float)
+
 ;;;; Commands
 
 (defun let-it-snow (&optional manual)
@@ -123,7 +134,9 @@ snow, displayed with these characters."
         (when snow-show-background
           (snow-insert-background :start-at -1)))
       (goto-char (point-min))
-      (setq snow-flakes nil)
+      (setf snow-flakes nil
+	    snow-storm-factor snow-storm-initial-factor
+	    snow-storm-frames 0)
       (use-local-map (make-sparse-keymap))
       (local-set-key (kbd "SPC") (lambda ()
                                    (interactive)
@@ -156,18 +169,29 @@ snow, displayed with these characters."
     ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color z))))
     (_ (propertize "." 'face (list :foreground (snow-flake-color z))))))
 
+
+
 (defun snow--update-buffer (buffer)
   (with-current-buffer buffer
+    (when (>= (cl-incf snow-storm-frames) snow-storm-interval)
+      (setf snow-storm-factor (clamp 0.1
+				     (+ snow-storm-factor
+					(if (zerop (random 2))
+					    -0.1 0.1))
+				     2)
+	    snow-storm-frames 0))
     (let ((lines (window-text-height (get-buffer-window buffer t)))
-          (cols (window-width (get-buffer-window buffer t))))
-      (setq snow-flakes
-            (append snow-flakes
-                    (cl-loop for i from 0 to (random snow-amount)
-                             for x = (random cols)
-                             for mass = (float (random 100))
-                             for flake = (make-snow-flake :x x :y 0 :mass mass :char (snow-flake-get-flake mass))
-                             do (snow-flake-draw flake)
-                             collect flake)))
+          (cols (window-width (get-buffer-window buffer t)))
+	  (num-new-flakes (if (< (cl-random 1.0) snow-storm-factor)
+                              1 0)))
+      (unless (zerop num-new-flakes)
+        (setf snow-flakes (append snow-flakes
+                                  (cl-loop for i from 0 to num-new-flakes
+                                           for x = (random cols)
+                                           for mass = (float (* snow-storm-factor (random 100)))
+                                           for flake = (make-snow-flake :x x :y 0 :mass mass :char (snow-flake-get-flake mass))
+                                           do (snow-flake-draw flake)
+                                           collect flake))))
       (setq snow-flakes
             (cl-loop for flake in snow-flakes
                      for new-flake = (progn
@@ -193,7 +217,8 @@ snow, displayed with these characters."
                                          nil))
                      when new-flake
                      collect new-flake)))
-    (setq mode-line-format (format "%s flakes" (length snow-flakes)))))
+    (setq mode-line-format (format "Flakes:%s  Frames:%s  Factor:%s"
+				   (length snow-flakes) snow-storm-frames snow-storm-factor))))
 
 (defun snow-flake-pos (flake)
   (save-excursion
