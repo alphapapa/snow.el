@@ -185,6 +185,7 @@ snow, displayed with these characters."
   (max min (min max number)))
 
 (defsubst snow-flake-color (mass)
+  (setf mass (clamp 0 mass 100))
   (let ((raw (/ (+ mass 155) 255)))
     (color-rgb-to-hex raw raw raw 2)))
 
