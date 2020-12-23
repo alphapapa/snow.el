@@ -37,6 +37,9 @@
 ;; be the case when using a monospaced font, but apparently it can
 ;; happen (e.g. with "Fantasque Sans Mono").
 
+;; FIXME: Change buffer height/width back to use the full window
+;; (changed it to use 1- while debugging).
+
 ;;; Code:
 
 ;;;; Requirements
