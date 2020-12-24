@@ -306,7 +306,7 @@ Also draws each flake."
            for x = (random cols)
            for mass = (float (* snow-storm-factor (random 100)))
            for flake = (make-snow-flake :x x :y 0 :mass mass :string (snow-flake-mass-string mass))
-           do (snow-flake-draw flake cols)
+           do (snow-flake-draw flake)
            collect flake))
 
 (defun snow-flake-update (flake)
@@ -336,11 +336,10 @@ Piles flake if it lands within the buffer."
           (delete-overlay (snow-flake-overlay flake)))
         ;; No more flake.
         nil)
-    (progn
-      ;; Redraw flake
-      (snow-flake-draw flake (1- snow-window-width))
-      ;; Return moved flake
-      flake)))
+    ;; Redraw flake
+    (snow-flake-draw flake)
+    ;; Return moved flake
+    flake))
 
 (defun snow-pile (flake pos-below)
   "Pile FLAKE having landed at POS-BELOW."
@@ -368,21 +367,19 @@ Piles flake if it lands within the buffer."
         (setf (buffer-substring pos (1+ pos)) ground-snow-string))
       (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
 
-(defun snow-flake-draw (flake max-x)
-  (let ((pos (unless (or (< (snow-flake-x flake) 0)
-			 (> (snow-flake-x flake) (1- max-x)))
-               (save-excursion
-                 (goto-char (point-min))
-                 (forward-line (snow-flake-y flake))
-                 (forward-char (snow-flake-x flake))
-                 (point)))))
-    (if pos
-        (if (snow-flake-overlay flake)
-            (move-overlay (snow-flake-overlay flake) pos (1+ pos))
-          (setf (snow-flake-overlay flake) (make-overlay pos (1+ pos)))
-          (overlay-put (snow-flake-overlay flake) 'display (snow-flake-string flake)))
-      (when (snow-flake-overlay flake)
-	(delete-overlay (snow-flake-overlay flake))))))
+(defun snow-flake-draw (flake)
+  "Draw FLAKE when it's within the buffer.
+If not, delete its overlay."
+  (if-let ((pos (when (snow-flake-within-sides-p flake)
+                  (snow-flake-pos flake))))
+      ;; Flake within window: draw it.
+      (if (snow-flake-overlay flake)
+          (move-overlay (snow-flake-overlay flake) pos (1+ pos))
+        (setf (snow-flake-overlay flake) (make-overlay pos (1+ pos)))
+        (overlay-put (snow-flake-overlay flake) 'display (snow-flake-string flake)))
+    ;; Flake outside window: delete its overlay.
+    (when (snow-flake-overlay flake)
+      (delete-overlay (snow-flake-overlay flake)))))
 
 (cl-defun snow-insert-background (&key string (start-line 0) (start-col 0))
   "Insert STRING at START-LINE and START-COL."
