@@ -165,6 +165,7 @@ snow, displayed with these characters."
       (switch-to-buffer (current-buffer))
       (buffer-disable-undo)
       (erase-buffer)
+      (remove-overlays)
       (toggle-truncate-lines 1)
       (setq-local cursor-type nil)
       (setf snow-window-width (window-text-width (get-buffer-window (current-buffer) t))
@@ -391,7 +392,6 @@ Piles flake if it lands within the buffer."
                        (-1 (- (line-number-at-pos (point-max)) height 1))
                        (_ start-line))))
     (cl-assert (>= (line-number-at-pos (point-max)) height))
-    (remove-overlays)
     (save-excursion
       (goto-char (point-min))
       (forward-line start-line)
