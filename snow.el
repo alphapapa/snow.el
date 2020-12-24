@@ -80,12 +80,8 @@
 The lower the number, the faster snow will accumulate."
   :type 'number)
 
-(defface snow-face
-  '((t :foreground "white"))
-  "The face.")
-
 (defcustom snow-show-background t
-  "Show the `snow-background' scene."
+  "Show the `snow-backgrounds' scene."
   :type 'boolean)
 
 (defcustom snow-backgrounds
@@ -118,8 +114,9 @@ The lower the number, the faster snow will accumulate."
         ###        
         ###        
 " 0 9 (fontified t face (:foreground "gold")) 9 10 (fontified t face (:foreground "gold")) 19 20 (fontified t face (:foreground "gold")) 20 28 (fontified t face (:foreground "gold")) 28 30 (fontified t face (:foreground "gold")) 30 31 (fontified t face (:foreground "gold")) 39 40 (fontified t) 40 49 (fontified t face (:foreground "forest green")) 49 50 (fontified t face (:foreground "forest green")) 59 60 (fontified t face (:foreground "forest green")) 60 68 (fontified t face (:foreground "forest green")) 68 71 (fontified t face (:foreground "forest green")) 79 80 (fontified t face (:foreground "forest green")) 80 86 (fontified t face (:foreground "forest green")) 86 93 (fontified t face (:foreground "forest green")) 99 100 (fontified t face (:foreground "forest green")) 100 104 (fontified t face (:foreground "forest green")) 104 115 (fontified t face (:foreground "forest green")) 119 120 (fontified t face (:foreground "forest green")) 120 127 (fontified t face (:foreground "forest green")) 127 132 (fontified t face (:foreground "forest green")) 139 140 (fontified t face (:foreground "forest green")) 140 146 (fontified t face (:foreground "forest green")) 146 153 (fontified t face (:foreground "forest green")) 159 160 (fontified t face (:foreground "forest green")) 160 164 (fontified t face (:foreground "forest green")) 164 174 (fontified t face (:foreground "forest green")) 179 180 (fontified t face (:foreground "forest green")) 180 182 (fontified t face (:foreground "forest green")) 182 197 (fontified t face (:foreground "forest green")) 199 200 (fontified t face (:foreground "forest green")) 200 206 (fontified t face (:foreground "forest green")) 206 213 (fontified t face (:foreground "forest green")) 219 220 (fontified t face (:foreground "forest green")) 220 225 (fontified t face (:foreground "forest green")) 225 234 (fontified t face (:foreground "forest green")) 239 240 (fontified t face (:foreground "forest green")) 240 242 (fontified t face (:foreground "forest green")) 242 257 (fontified t face (:foreground "forest green")) 259 260 (fontified t face (:foreground "forest green")) 260 279 (fontified t face (:foreground "forest green")) 279 280 (fontified t) 280 288 (fontified t) 288 291 (fontified t face (:foreground "brown")) 299 300 (fontified t face (:foreground "brown")) 300 308 (fontified t face (:foreground "brown")) 308 311 (fontified t face (:foreground "brown")) 319 320 (fontified t face (:foreground "brown")) 320 328 (fontified t face (:foreground "brown")) 328 331 (fontified t face (:foreground "brown")))))
-  "Background string."
-  :type '(repeat cons))
+  "Background strings."
+  :type '(repeat (alist :key-type (integer :tag "Offset from left window edge")
+                        :value-type (string :tag "String"))))
 
 (defcustom snow-pile-strings
   '((0.0 . " ")
@@ -137,7 +134,7 @@ The lower the number, the faster snow will accumulate."
 Each position in the buffer may have an accumulated amount of
 snow, displayed with these characters."
   :type '(alist :key-type float
-                :value-type character))
+                :value-type string))
 
 (defcustom snow-storm-interval
   (lambda ()
