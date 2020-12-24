@@ -54,11 +54,16 @@
 (defvar snow-amount 5)
 (defvar snow-rate 0.09)
 (defvar snow-timer nil)
+(defvar snow-window-width nil)
+(defvar snow-window-height nil)
 
 (defvar snow-storm-frames nil)
 (defvar snow-storm-reset-frame nil)
 (defvar snow-storm-factor 1)
 (defvar snow-storm-wind 0)
+
+(cl-defstruct snow-flake
+  x y mass string overlay)
 
 ;;;; Customization
 
@@ -171,21 +176,15 @@ snow, displayed with these characters."
         (progn
           (cancel-timer snow-timer)
           (setq snow-timer nil))
-      ;; Start
+      ;; Start snowing.
       (switch-to-buffer (current-buffer))
       (buffer-disable-undo)
+      (erase-buffer)
       (toggle-truncate-lines 1)
       (setq-local cursor-type nil)
-      (erase-buffer)
-      (save-excursion
-        (dotimes (_i (window-text-height (get-buffer-window (current-buffer) t)))
-          (insert (make-string (window-text-width (get-buffer-window (current-buffer) t)) ? )
-                  "\n"))
-        (when snow-show-background
-          (pcase-dolist (`(,col . ,string) snow-backgrounds)
-	    (snow-insert-background :start-line -1 :start-col col :s string))))
-      (goto-char (point-min))
-      (setf snow-flakes nil
+      (setf snow-window-width (window-text-width (get-buffer-window (current-buffer) t))
+            snow-window-height (window-text-height (get-buffer-window (current-buffer) t))
+            snow-flakes nil
             snow-storm-factor (cl-etypecase snow-storm-initial-factor
                                 (function (funcall snow-storm-initial-factor))
                                 (number snow-storm-initial-factor))
@@ -201,6 +200,15 @@ snow, displayed with these characters."
 				     (continuation . nil))
 	    left-fringe-width 0
 	    right-fringe-width 0)
+      (goto-char (point-min))
+      (save-excursion
+        (dotimes (_i snow-window-height)
+          ;; Fill buffer with spaces up to window size.
+          (insert (make-string snow-window-width ? )
+                  "\n"))
+        (when snow-show-background
+          (pcase-dolist (`(,col . ,string) snow-backgrounds)
+	    (snow-insert-background :start-line -1 :start-col col :s string))))
       (use-local-map (make-sparse-keymap))
       (local-set-key (kbd "SPC") (lambda ()
                                    (interactive)
@@ -215,9 +223,6 @@ snow, displayed with these characters."
 
 ;;;; Functions
 
-(cl-defstruct snow-flake
-  x y mass char overlay)
-
 (defsubst clamp (min number max)
   "Return NUMBER clamped to between MIN and MAX, inclusive."
   (max min (min max number)))
@@ -227,14 +232,57 @@ snow, displayed with these characters."
   (let ((raw (/ (+ mass 155) 255)))
     (color-rgb-to-hex raw raw raw 2)))
 
-(defun snow-flake-get-flake (z)
-  (pcase z
-    ((pred (< 90)) (propertize "❄" 'face (list :foreground (snow-flake-color z))))
-    ((pred (< 50)) (propertize "*" 'face (list :foreground (snow-flake-color z))))
-    ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color z))))
-    (_ (propertize "." 'face (list :foreground (snow-flake-color z))))))
+(defun snow-flake-mass-string (mass)
+  "Return string for flake having MASS."
+  (pcase mass
+    ((pred (< 90)) (propertize "❄" 'face (list :foreground (snow-flake-color mass))))
+    ((pred (< 50)) (propertize "*" 'face (list :foreground (snow-flake-color mass))))
+    ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color mass))))
+    (_ (propertize "." 'face (list :foreground (snow-flake-color mass))))))
+
+(defun snow-flake-landed-at (flake)
+  "Return buffer position FLAKE landed at."
+  ;; FIXME: Eventually use full height rather than one less.
+  (or (when (>= (snow-flake-y flake) (1- snow-window-height))
+        ;; Flake hit bottom of buffer.
+        (if (snow-flake-within-sides-p flake)
+            ;; Flake within horizontal limit of buffer: return buffer position.
+            (snow-flake-pos flake)
+          ;; Flake outside horizontal limit of buffer: return t.
+          t))
+      (when-let ((pos-below (when (snow-flake-within-sides-p flake)
+                              (snow-flake-pos-below flake))))
+        ;; A position exists below the flake and within the buffer.
+        (when (not (equal ?  (char-after pos-below)))
+          ;; That position is not empty (i.e. not a space): return that position.
+          pos-below))))
+
+(defun snow-flake-within-sides-p (flake)
+  "Return non-nil if FLAKE is within window's sides."
+  (and (<= 0 (snow-flake-x flake))
+       ;; FIXME: Eventually go up to the width rather than 2 less.
+       (< (snow-flake-x flake) (- snow-window-width 2))))
+
+(defun snow-flake-pos (flake)
+  "Return buffer position of FLAKE."
+  (save-excursion
+    (goto-char (point-min))
+    (forward-line (snow-flake-y flake))
+    (forward-char (snow-flake-x flake))
+    (point)))
+
+(defun snow-flake-pos-below (flake)
+  "Return buffer position below FLAKE, or nil."
+  (save-excursion
+    (goto-char (snow-flake-pos flake))
+    (ignore-errors
+      (let ((col (current-column)))
+        (forward-line 1)
+        (forward-char col)
+        (point)))))
 
 (defun snow--update-buffer (buffer)
+  "Update snow in BUFFER."
   (with-current-buffer buffer
     (when (>= (cl-incf snow-storm-frames) snow-storm-reset-frame)
       (setf snow-storm-reset-frame (cl-etypecase snow-storm-interval
@@ -251,81 +299,62 @@ snow, displayed with these characters."
                                           -0.05 0.05))
                                    snow-storm-wind-max)
             snow-storm-frames 0))
-    (let ((lines (window-text-height (get-buffer-window buffer t)))
-          (cols (window-width (get-buffer-window buffer t)))
-	  (num-new-flakes (if (< (cl-random 1.0) snow-storm-factor)
+    (let ((num-new-flakes (if (< (cl-random 1.0) snow-storm-factor)
                               1 0)))
       (unless (zerop num-new-flakes)
-        (setf snow-flakes (append snow-flakes
-                                  (cl-loop for i from 0 to num-new-flakes
-                                           for x = (random cols)
-                                           for mass = (float (* snow-storm-factor (random 100)))
-                                           for flake = (make-snow-flake :x x :y 0 :mass mass :char (snow-flake-get-flake mass))
-                                           do (snow-flake-draw flake cols)
-                                           collect flake))))
+        ;; FIXME: This can only produce one flake per frame, which isn't quite what I want.
+        (setf snow-flakes (append snow-flakes (snow-new-flakes num-new-flakes (1- snow-window-width)))))
       (setq snow-flakes
             (cl-loop for flake in snow-flakes
-                     for new-flake = (cl-labels ((flake-landed-at
-                                                  (flake) (or (when (>= (snow-flake-y flake) (1- lines))
-                                                                (if (flake-within-sides-p flake)
-								    (snow-flake-pos flake)
-								  t))
-                                                              (when-let ((pos-below (when (flake-within-sides-p flake)
-                                                                                      (snow-flake-pos-below flake))))
-                                                                (when (not (equal ?  (char-after pos-below)))
-                                                                  pos-below))))
-                                                 (flake-within-sides-p
-                                                  (flake) (and (<= 0 (snow-flake-x flake))
-                                                               (< (snow-flake-x flake) (- cols 2)))))
-                                       ;; Calculate new flake position.
-                                       (unless (zerop snow-storm-wind)
-                                         ;; Wind.
-                                         (when (<= (cl-random snow-storm-wind-max) (abs snow-storm-wind))
-                                           (cl-incf (snow-flake-x flake) (round (copysign 1.0 snow-storm-wind)))))
-                                       (when (and (> (random 100) (snow-flake-mass flake))
-                                                  ;; Easiest way to just reduce the chance of X movement is to add another condition.
-                                                  (> (random 3) 0))
-					 ;; Random floatiness.
-                                         (cl-incf (snow-flake-x flake) (pcase (random 2)
-                                                                         (0 -1)
-                                                                         (1 1))))
-                                       (when (> (random 100) (/ (- 100 (snow-flake-mass flake)) 3))
-                                         (cl-incf (snow-flake-y flake)))
-                                       (if-let ((landed-at (flake-landed-at flake)))
-                                           (progn
-                                             ;; Flake hit end of buffer: delete overlay.
-                                             (when (numberp landed-at)
-                                               (snow-pile flake landed-at))
-                                             (when (snow-flake-overlay flake)
-                                               (delete-overlay (snow-flake-overlay flake)))
-                                             nil)
-                                         (progn
-                                           ;; Redraw flake
-                                           (snow-flake-draw flake cols)
-                                           ;; Return moved flake
-                                           flake)))
+                     for new-flake = (snow-flake-update flake)
                      when new-flake
                      collect new-flake)))
     (when snow-debug
       (setq mode-line-format (format "Flakes:%s  Frames:%s  Factor:%s  Wind:%s"
                                      (length snow-flakes) snow-storm-frames snow-storm-factor snow-storm-wind)))))
 
-(defun snow-flake-pos (flake)
-  (save-excursion
-    (goto-char (point-min))
-    (forward-line (snow-flake-y flake))
-    (forward-char (snow-flake-x flake))
-    (point)))
+(defun snow-new-flakes (num cols)
+  "Return NUM new flakes across COLS.
+Also draws each flake."
+  (cl-loop for i from 0 to num
+           for x = (random cols)
+           for mass = (float (* snow-storm-factor (random 100)))
+           for flake = (make-snow-flake :x x :y 0 :mass mass :string (snow-flake-mass-string mass))
+           do (snow-flake-draw flake cols)
+           collect flake))
 
-(defun snow-flake-pos-below (flake)
-  (save-excursion
-    (goto-char (snow-flake-pos flake))
-    (or (ignore-errors
-	  (let ((col (current-column)))
-	    (forward-line 1)
-	    (forward-char col)
-	    (point)))
-	(snow-flake-pos flake))))
+(defun snow-flake-update (flake)
+  "Return updated FLAKE, or nil if it landed.
+Piles flake if it lands within the buffer."
+  (unless (zerop snow-storm-wind)
+    ;; Wind.
+    (when (<= (cl-random snow-storm-wind-max) (abs snow-storm-wind))
+      (cl-incf (snow-flake-x flake) (round (copysign 1.0 snow-storm-wind)))))
+  (when (and (> (random 100) (snow-flake-mass flake))
+             ;; Easiest way to just reduce the chance of X movement is to add another condition.
+             (> (random 3) 0))
+    ;; Random floatiness.
+    (cl-incf (snow-flake-x flake) (pcase (random 2)
+                                    (0 -1)
+                                    (1 1))))
+  (when (> (random 100) (/ (- 100 (snow-flake-mass flake)) 3))
+    ;; Gravity.
+    (cl-incf (snow-flake-y flake)))
+  (if-let ((landed-at (snow-flake-landed-at flake)))
+      (progn
+        ;; Flake hit end of buffer.
+        (when (numberp landed-at)
+          ;; Landed at position within buffer: add to pile.
+          (snow-pile flake landed-at))
+        (when (snow-flake-overlay flake)
+          (delete-overlay (snow-flake-overlay flake)))
+        ;; No more flake.
+        nil)
+    (progn
+      ;; Redraw flake
+      (snow-flake-draw flake (1- snow-window-width))
+      ;; Return moved flake
+      flake)))
 
 (defun snow-pile (flake pos)
   (cl-labels ((landed-at (flake pos)
@@ -362,7 +391,7 @@ snow, displayed with these characters."
         (if (snow-flake-overlay flake)
             (move-overlay (snow-flake-overlay flake) pos (1+ pos))
           (setf (snow-flake-overlay flake) (make-overlay pos (1+ pos)))
-          (overlay-put (snow-flake-overlay flake) 'display (snow-flake-char flake)))
+          (overlay-put (snow-flake-overlay flake) 'display (snow-flake-string flake)))
       (when (snow-flake-overlay flake)
 	(delete-overlay (snow-flake-overlay flake))))))
 
