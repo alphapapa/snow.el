@@ -219,7 +219,7 @@ snow, displayed with these characters."
   (let ((raw (/ (+ mass 155) 255)))
     (color-rgb-to-hex raw raw raw 2)))
 
-(defun snow-flake-mass-string (mass)
+(defsubst snow-flake-mass-string (mass)
   "Return string for flake having MASS."
   (pcase mass
     ((pred (< 90)) (propertize "❄" 'face (list :foreground (snow-flake-color mass))))
@@ -227,7 +227,7 @@ snow, displayed with these characters."
     ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color mass))))
     (_ (propertize "." 'face (list :foreground (snow-flake-color mass))))))
 
-(defun snow-flake-landed-at (flake)
+(defsubst snow-flake-landed-at (flake)
   "Return buffer position FLAKE landed at, or t if outside buffer."
   ;; FIXME: Eventually use full height rather than one less.
   (or (when (>= (snow-flake-y flake) (1- snow-window-height))
@@ -244,13 +244,13 @@ snow, displayed with these characters."
           ;; That position is not empty (i.e. not a space): return that position.
           pos-below))))
 
-(defun snow-flake-within-sides-p (flake)
+(defsubst snow-flake-within-sides-p (flake)
   "Return non-nil if FLAKE is within window's sides."
   (and (<= 0 (snow-flake-x flake))
        ;; FIXME: Eventually go up to the width rather than 2 less.
        (< (snow-flake-x flake) (- snow-window-width 2))))
 
-(defun snow-flake-pos (flake)
+(defsubst snow-flake-pos (flake)
   "Return buffer position of FLAKE."
   (save-excursion
     (goto-char (point-min))
@@ -258,7 +258,7 @@ snow, displayed with these characters."
     (forward-char (snow-flake-x flake))
     (point)))
 
-(defun snow-flake-pos-below (flake)
+(defsubst snow-flake-pos-below (flake)
   "Return buffer position below FLAKE, or nil."
   (save-excursion
     (goto-char (snow-flake-pos flake))
