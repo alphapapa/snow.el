@@ -88,18 +88,6 @@ The lower the number, the faster snow will accumulate."
   "Show the `snow-background' scene."
   :type 'boolean)
 
-(defcustom snow-background
-  #("                                       __                                                                                             
-                                     _|__|_             __                                                                            
-        /\\       /\\                   ('')            _|__|_                                                                          
-       /  \\     /  \\                <( . )>            ('')                                                                           
-       /  \\     /  \\               _(__.__)_  _   ,--<(  . )>                                                                         
-      /    \\   /    \\              |       |  )),`   (   .  )                                                                         
-       `||`     `||`               ==========='`       '--`-`                                                                         
-" 39 41 (face (:foreground "black")) 172 178 (face (:foreground "black")) 190 193 (face (:foreground "black")) 278 280 (face (:foreground "green")) 287 289 (face (:foreground "green")) 308 309 (face (:foreground "white")) 309 311 (face (:foreground "black")) 311 312 (face (:foreground "white")) 324 330 (face (:foreground "black")) 412 413 (face (:foreground "green")) 413 416 (face (:foreground "green")) 421 425 (face (:foreground "green")) 441 442 (face (:foreground "brown")) 442 443 (face (:foreground "white")) 444 445 (face (:foreground "black")) 446 447 (face (:foreground "white")) 447 448 (face (:foreground "brown")) 460 461 (face (:foreground "white")) 461 463 (face (:foreground "black")) 463 464 (face (:foreground "white")) 547 560 (face (:foreground "green")) 576 579 (face (:foreground "white")) 579 580 (face (:foreground "black")) 580 583 (face (:foreground "white")) 586 587 (face (:foreground "black")) 590 593 (face (:foreground "brown")) 593 594 (face (:foreground "brown")) 594 595 (face (:foreground "white")) 597 598 (face (:foreground "black")) 599 600 (face (:foreground "white")) 600 601 (face (:foreground "brown")) 681 696 (face (:foreground "green")) 721 723 (face (:foreground "black")) 723 724 (face (:foreground "brown")) 724 725 (face (:foreground "brown")) 728 729 (face (:foreground "white")) 732 733 (face (:foreground "black")) 735 736 (face (:foreground "white")) 818 820 (face (:foreground "brown")) 827 829 (face (:foreground "brown")) 845 856 (face (:foreground "black")) 856 858 (face (:foreground "brown")) 865 871 (face (:foreground "gray")))
-  "Background string."
-  :type 'string)
-
 (defcustom snow-backgrounds
   (list
    (cons 0 
@@ -208,7 +196,7 @@ snow, displayed with these characters."
                   "\n"))
         (when snow-show-background
           (pcase-dolist (`(,col . ,string) snow-backgrounds)
-	    (snow-insert-background :start-line -1 :start-col col :s string))))
+	    (snow-insert-background :start-line -1 :start-col col :string string))))
       (use-local-map (make-sparse-keymap))
       (local-set-key (kbd "SPC") (lambda ()
                                    (interactive)
@@ -399,9 +387,8 @@ Piles flake if it lands within the buffer."
       (when (snow-flake-overlay flake)
 	(delete-overlay (snow-flake-overlay flake))))))
 
-(cl-defun snow-insert-background (&key (s snow-background) (start-line 0)
-				       (start-col 0))
-  (let* ((lines (split-string s "\n"))
+(cl-defun snow-insert-background (&key string (start-line 0) (start-col 0))
+  (let* ((lines (split-string string "\n"))
          (height (length lines))
          (start-line (pcase start-line
                        (-1 (- (line-number-at-pos (point-max)) height 1))
