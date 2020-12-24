@@ -342,18 +342,17 @@ Piles flake if it lands within the buffer."
       ;; Return moved flake
       flake)))
 
-(defun snow-pile (flake pos)
-  (cl-labels ((landed-at (flake pos)
-                         ;; FIXME: This is called with the `pos' below
-                         ;; the flake, which is a bit confusing.
-                         (let* ((mass-at-pos (or (get-text-property pos 'snow (current-buffer)) 0)))
+(defun snow-pile (flake pos-below)
+  "Pile FLAKE having landed at POS-BELOW."
+  (cl-labels ((landed-at (flake pos-below)
+                         (let* ((mass-at-pos (or (get-text-property pos-below 'snow (current-buffer)) 0)))
                            (pcase mass-at-pos
                              ((pred (< 100))
                               ;; Position has more than 100 mass: land
                               ;; above it and return 0 mass.
                               (list (snow-flake-pos flake) 0))
-                             (_ (list pos mass-at-pos))))))
-    (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake pos))
+                             (_ (list pos-below mass-at-pos))))))
+    (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake pos-below))
 		 (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
 		 (char (alist-get (/ ground-snow-mass 100) snow-pile-strings
 				  (alist-get 1.0 snow-pile-strings nil nil
