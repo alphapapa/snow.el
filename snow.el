@@ -208,12 +208,12 @@ snow, displayed with these characters."
 
 ;;;; Functions
 
-(defsubst clamp (min number max)
+(defsubst snow-clamp (min number max)
   "Return NUMBER clamped to between MIN and MAX, inclusive."
   (max min (min max number)))
 
 (defsubst snow-flake-color (mass)
-  (setf mass (clamp 0 mass 100))
+  (setf mass (snow-clamp 0 mass 100))
   (let ((raw (/ (+ mass 155) 255)))
     (color-rgb-to-hex raw raw raw 2)))
 
@@ -273,16 +273,16 @@ snow, displayed with these characters."
       (setf snow-storm-reset-frame (cl-etypecase snow-storm-interval
                                      (function (funcall snow-storm-interval))
                                      (number snow-storm-interval))
-            snow-storm-factor (clamp 0.1
-                                     (+ snow-storm-factor
-                                        (if (zerop (random 2))
-                                            -0.1 0.1))
-                                     2)
-            snow-storm-wind (clamp (- snow-storm-wind-max)
-                                   (+ snow-storm-wind
-                                      (if (zerop (random 2))
-                                          -0.05 0.05))
-                                   snow-storm-wind-max)
+            snow-storm-factor (snow-clamp 0.1
+                                          (+ snow-storm-factor
+                                             (if (zerop (random 2))
+                                                 -0.1 0.1))
+                                          2)
+            snow-storm-wind (snow-clamp (- snow-storm-wind-max)
+                                        (+ snow-storm-wind
+                                           (if (zerop (random 2))
+                                               -0.05 0.05))
+                                        snow-storm-wind-max)
             snow-storm-frames 0))
     (let ((num-new-flakes (if (< (cl-random 1.0) snow-storm-factor)
                               1 0)))
