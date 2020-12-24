@@ -46,6 +46,7 @@
 
 (require 'cl-lib)
 (require 'color)
+(require 'subr-x)
 
 ;;;; Variables
 
