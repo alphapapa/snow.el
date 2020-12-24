@@ -2,7 +2,7 @@
 
 /Let it snow in Emacs!/
 
-[[snow.mp4][Preview video]]
+[[https://github.com/alphapapa/snow.el/blob/meta/video/snow.mp4?raw=true][Preview video]] ([[https://www.reddit.com/r/emacs/comments/kjd2z2/let_it_snow_in_emacs_now_with_wind_varying/][on Reddit]])
 
 [[snow.png]]
 
