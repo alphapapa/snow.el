@@ -361,7 +361,7 @@ Piles flake if it lands within the buffer."
                          (let* ((mass (or (get-text-property pos 'snow (current-buffer)) 0)))
                            (pcase mass
                              ((pred (< 100))
-                              (snow-flake-pos flake))
+                              (list (snow-flake-pos flake) mass))
                              (_ (list pos mass))))))
     (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake pos))
 		 (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
