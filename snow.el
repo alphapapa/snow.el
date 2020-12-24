@@ -386,12 +386,16 @@ Piles flake if it lands within the buffer."
 	(delete-overlay (snow-flake-overlay flake))))))
 
 (cl-defun snow-insert-background (&key string (start-line 0) (start-col 0))
+  "Insert STRING at START-LINE and START-COL."
   (let* ((lines (split-string string "\n"))
          (height (length lines))
          (start-line (pcase start-line
-                       (-1 (- (line-number-at-pos (point-max)) height 1))
+                       (-1 (- (line-number-at-pos (point-max)) height))
                        (_ start-line))))
     (cl-assert (>= (line-number-at-pos (point-max)) height))
+    (when (string-empty-p (car (last lines)))
+      ;; Remove final line break.
+      (setf lines (butlast lines)))
     (save-excursion
       (goto-char (point-min))
       (forward-line start-line)
