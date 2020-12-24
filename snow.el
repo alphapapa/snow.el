@@ -226,7 +226,7 @@ snow, displayed with these characters."
     (_ (propertize "." 'face (list :foreground (snow-flake-color mass))))))
 
 (defun snow-flake-landed-at (flake)
-  "Return buffer position FLAKE landed at."
+  "Return buffer position FLAKE landed at, or t if outside buffer."
   ;; FIXME: Eventually use full height rather than one less.
   (or (when (>= (snow-flake-y flake) (1- snow-window-height))
         ;; Flake hit bottom of buffer.
