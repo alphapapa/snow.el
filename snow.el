@@ -401,12 +401,9 @@ Piles flake if it lands within the buffer."
                     (setf (buffer-substring pos (+ pos (length line))) line)
                     (forward-line 1))))))
 
-
 ;;;; Footer
 
 (provide 'snow)
-
-;;; snow.el ends here
 
 ;; Ensure that the before-save-hook doesn't, e.g. delete-trailing-whitespace,
 ;; which breaks the background string.
@@ -414,3 +411,5 @@ Piles flake if it lands within the buffer."
 ;; Local Variables:
 ;; before-save-hook: nil
 ;; End:
+
+;;; snow.el ends here
