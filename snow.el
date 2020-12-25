@@ -221,11 +221,12 @@ snow, displayed with these characters."
 
 (defsubst snow-flake-mass-string (mass)
   "Return string for flake having MASS."
-  (pcase mass
-    ((pred (< 90)) (propertize "❄" 'face (list :foreground (snow-flake-color mass))))
-    ((pred (< 50)) (propertize "*" 'face (list :foreground (snow-flake-color mass))))
-    ((pred (< 10)) (propertize "." 'face (list :foreground (snow-flake-color mass))))
-    (_ (propertize "." 'face (list :foreground (snow-flake-color mass))))))
+  (propertize (pcase mass
+                ((pred (< 90)) "❄")
+                ((pred (< 50)) "*")
+                ((pred (< 10)) ".")
+                (_ "."))
+              'face (list :foreground (snow-flake-color mass))))
 
 (defsubst snow-flake-landed-at (flake)
   "Return buffer position FLAKE landed at, or t if outside buffer."
