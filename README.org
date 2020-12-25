@@ -9,4 +9,4 @@
 * Usage
 
 1.  Load =snow.el=, e.g. with =M-x emacs-lisp-byte-compile-and-load RET=.
-2.  Run =M-x let-it-snow RET=.
+2.  Run =M-x snow RET=.
