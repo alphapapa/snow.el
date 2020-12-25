@@ -6,7 +6,26 @@
 
 [[snow.png]]
 
+* Installation
+
++  From MELPA :: You may install the package ~snow~ from [[https://melpa.org/#/snow][MELPA]].
++  With Quelpa ::
+     1.  Install [[https://framagit.org/steckerhalter/quelpa-use-package#installation][quelpa-use-package]].
+     2.  Add this form to your init file:
+  #+BEGIN_SRC elisp
+       (use-package snow
+         :quelpa (snow :fetcher github :repo "alphapapa/snow.el"))
+  #+END_SRC
++  Manually :: Load =snow.el=, e.g. with =M-x emacs-lisp-byte-compile-and-load RET=.
+
 * Usage
 
-1.  Load =snow.el=, e.g. with =M-x emacs-lisp-byte-compile-and-load RET=.
-2.  Run =M-x snow RET=.
+ Run =M-x snow RET=.
+
+* Tips
+
++  Use ~M-x customize-group RET snow RET~ to customize options.
+
+* License
+
+GPLv3
