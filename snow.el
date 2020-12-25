@@ -1,9 +1,14 @@
 ;;; snow.el --- Let it snow in Emacs!         -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2019  Adam Porter
+;; Copyright (C) 2018-2020  Adam Porter
 
 ;; Author: Adam Porter <adam@alphapapa.net>
+;; URL: https://github.com/alphapapa/snow.el
+;; Version: 0.1-pre
+;; Package-Requires: ((emacs "26.3"))
 ;; Keywords: games
+
+;;;; License:
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -18,14 +23,6 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-;;; Commentary:
-
-;; Displays a buffer in which it snows.
-
-;; NOTE: Be sure to preserve whitespace in the `snow-background'
-;; string, otherwise the text-properties will become corrupted and
-;; cause an error on load.
-
 ;;; Notes:
 
 ;; TODO: Add a fireplace and window panes looking out on the snowy
@@ -39,6 +36,16 @@
 
 ;; FIXME: Change buffer height/width back to use the full window
 ;; (changed it to use 1- while debugging).
+
+;; NOTE: Be sure to preserve whitespace in the `snow-background'
+;; string, otherwise the text-properties will become corrupted and
+;; cause an error on load.
+
+;;; Commentary:
+
+;; Let it snow in Emacs!  Command `snow' displays a buffer in which it
+;; snows.  The storm varies in intensity, a gentle breeze blows at
+;; times, and snow accumulates on the terrain in the scene.
 
 ;;; Code:
 
@@ -70,7 +77,8 @@
 
 (defgroup snow nil
   "Let it snow!"
-  :group 'games)
+  :group 'games
+  :link '(url-link "https://github.com/alphapapa/snow.el"))
 
 (defcustom snow-debug nil
   "Show debug info in mode line."
@@ -155,7 +163,10 @@ snow, displayed with these characters."
 
 ;;;; Commands
 
-(defun let-it-snow (&optional manual)
+(defun snow (&optional manual)
+  "Let it snow!
+If already snowing, stop.  If MANUAL (interactively, with
+prefix), advance snow frames manually by pressing \"SPC\"."
   (interactive "P")
   (with-current-buffer (get-buffer-create "*snow*")
     (if snow-timer
@@ -168,6 +179,10 @@ snow, displayed with these characters."
       (erase-buffer)
       (remove-overlays)
       (toggle-truncate-lines 1)
+      (use-local-map (make-sparse-keymap))
+      (local-set-key (kbd "SPC") (lambda ()
+                                   (interactive)
+                                   (snow--update-buffer (current-buffer))))
       (setq-local cursor-type nil)
       (setf snow-window-width (window-text-width (get-buffer-window (current-buffer) t))
             snow-window-height (window-text-height (get-buffer-window (current-buffer) t))
@@ -196,10 +211,6 @@ snow, displayed with these characters."
         (when snow-show-background
           (pcase-dolist (`(,col . ,string) snow-backgrounds)
 	    (snow-insert-background :start-line -1 :start-col col :string string))))
-      (use-local-map (make-sparse-keymap))
-      (local-set-key (kbd "SPC") (lambda ()
-                                   (interactive)
-                                   (snow--update-buffer (current-buffer))))
       (unless manual
         (setq snow-timer
               (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (get-buffer-create "*snow*"))))
@@ -215,6 +226,7 @@ snow, displayed with these characters."
   (max min (min max number)))
 
 (defsubst snow-flake-color (mass)
+  "Return color name for a flake having MASS."
   (setf mass (snow-clamp 0 mass 100))
   (let ((raw (/ (+ mass 155) 255)))
     (color-rgb-to-hex raw raw raw 2)))
@@ -227,23 +239,6 @@ snow, displayed with these characters."
                 ((pred (< 10)) ".")
                 (_ "."))
               'face (list :foreground (snow-flake-color mass))))
-
-(defsubst snow-flake-landed-at (flake)
-  "Return buffer position FLAKE landed at, or t if outside buffer."
-  ;; FIXME: Eventually use full height rather than one less.
-  (or (when (>= (snow-flake-y flake) (1- snow-window-height))
-        ;; Flake hit bottom of buffer.
-        (if (snow-flake-within-sides-p flake)
-            ;; Flake within horizontal limit of buffer: return buffer position.
-            (snow-flake-pos flake)
-          ;; Flake outside horizontal limit of buffer: return t.
-          t))
-      (when-let ((pos-below (when (snow-flake-within-sides-p flake)
-                              (snow-flake-pos-below flake))))
-        ;; A position exists below the flake and within the buffer.
-        (when (not (equal ?  (char-after pos-below)))
-          ;; That position is not empty (i.e. not a space): return that position.
-          pos-below))))
 
 (defsubst snow-flake-within-sides-p (flake)
   "Return non-nil if FLAKE is within window's sides."
@@ -268,6 +263,23 @@ snow, displayed with these characters."
         (forward-line 1)
         (forward-char col)
         (point)))))
+
+(defsubst snow-flake-landed-at (flake)
+  "Return buffer position FLAKE landed at, or t if outside buffer."
+  ;; FIXME: Eventually use full height rather than one less.
+  (or (when (>= (snow-flake-y flake) (1- snow-window-height))
+        ;; Flake hit bottom of buffer.
+        (if (snow-flake-within-sides-p flake)
+            ;; Flake within horizontal limit of buffer: return buffer position.
+            (snow-flake-pos flake)
+          ;; Flake outside horizontal limit of buffer: return t.
+          t))
+      (when-let ((pos-below (when (snow-flake-within-sides-p flake)
+                              (snow-flake-pos-below flake))))
+        ;; A position exists below the flake and within the buffer.
+        (when (not (equal ?  (char-after pos-below)))
+          ;; That position is not empty (i.e. not a space): return that position.
+          pos-below))))
 
 (defun snow--update-buffer (buffer)
   "Update snow in BUFFER."
