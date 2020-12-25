@@ -330,9 +330,9 @@ Piles flake if it lands within the buffer."
     (cl-incf (snow-flake-y flake)))
   (if-let ((landed-at (snow-flake-landed-at flake)))
       (progn
-        ;; Flake hit end of buffer.
+        ;; Flake hit bottom of window.
         (when (numberp landed-at)
-          ;; Landed at position within buffer: add to pile.
+          ;; Landed at position within window: add to pile.
           (snow-pile flake landed-at))
         (when (snow-flake-overlay flake)
           (delete-overlay (snow-flake-overlay flake)))
