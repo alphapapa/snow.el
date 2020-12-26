@@ -367,7 +367,7 @@ Piles flake if it lands within the buffer."
                              (_ (cons pos-below mass-at-pos))))))
     (pcase-let* ((`(,pos . ,ground-snow-mass) (landed-at flake pos-below))
 		 (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
-		 (char (or (alist-get (/ 0 100) snow-pile-strings nil nil #'>)
+		 (char (or (alist-get (/ ground-snow-mass 100) snow-pile-strings nil nil #'>)
                            (alist-get 1.0 snow-pile-strings nil nil #'eql)))
 		 (color (pcase ground-snow-mass
 			  ((pred (<= 100)) (snow-flake-color 100))
