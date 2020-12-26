@@ -363,9 +363,9 @@ Piles flake if it lands within the buffer."
                              ((pred (< 100))
                               ;; Position has more than 100 mass: land
                               ;; above it and return 0 mass.
-                              (list (snow-flake-pos flake) 0))
-                             (_ (list pos-below mass-at-pos))))))
-    (pcase-let* ((`(,pos ,ground-snow-mass) (landed-at flake pos-below))
+                              (cons (snow-flake-pos flake) 0))
+                             (_ (cons pos-below mass-at-pos))))))
+    (pcase-let* ((`(,pos . ,ground-snow-mass) (landed-at flake pos-below))
 		 (ground-snow-mass (+ ground-snow-mass (/ (snow-flake-mass flake) snow-pile-factor)))
 		 (char (or (alist-get (/ 0 100) snow-pile-strings nil nil #'>)
                            (alist-get 1.0 snow-pile-strings nil nil #'eql)))
