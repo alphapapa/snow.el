@@ -184,7 +184,14 @@ prefix), advance snow frames manually by pressing \"SPC\"."
                                    (interactive)
                                    (snow--update-buffer (current-buffer))))
       (setq-local cursor-type nil)
-      (setf snow-window-width (window-text-width (get-buffer-window (current-buffer) t))
+      (setf snow-window-width (if snow-show-background
+                                  (max (window-text-width (get-buffer-window (current-buffer) t))
+                                       (cl-loop for (offset . background) in snow-backgrounds
+                                                maximizing (+ (cl-loop for line in (split-string background "\n")
+                                                                       maximizing (string-width line))
+                                                              offset)))
+                                (window-text-width (get-buffer-window (current-buffer) t)))
+            ;; FIXME: Assumes that the backgrounds are less than the window height.
             snow-window-height (window-text-height (get-buffer-window (current-buffer) t))
             snow-flakes nil
             snow-storm-factor (cl-etypecase snow-storm-initial-factor
