@@ -179,6 +179,7 @@ snow, displayed with these characters."
 
 ;;;; Commands
 
+;;;###autoload
 (defun snow (&optional manual)
   "Let it snow!
 If already snowing, stop.  If MANUAL (interactively, with
