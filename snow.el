@@ -235,6 +235,7 @@ prefix), advance snow frames manually by pressing \"SPC\"."
         (when snow-show-background
           (pcase-dolist (`(,col . ,string) snow-backgrounds)
 	    (snow-insert-background :start-line -1 :start-col col :string string))))
+      (setq-local buffer-read-only t)
       (unless manual
         (setq snow-timer
               (run-at-time nil snow-rate (apply-partially #'snow--update-buffer (get-buffer-create "*snow*"))))
@@ -396,7 +397,8 @@ Piles flake if it lands within the buffer."
 		 (color (pcase ground-snow-mass
 			  ((pred (<= 100)) (snow-flake-color 100))
 			  (_ (snow-flake-color ground-snow-mass))))
-		 (ground-snow-string (propertize char 'face (list :foreground color))))
+		 (ground-snow-string (propertize char 'face (list :foreground color)))
+                 (inhibit-read-only t))
       (when ground-snow-string
         (setf (buffer-substring pos (1+ pos)) ground-snow-string))
       (add-text-properties pos (1+ pos) (list 'snow ground-snow-mass) (current-buffer)))))
