@@ -22,6 +22,8 @@
 
  Run =M-x snow RET=.
 
+ *NOTE:* Certain fonts may cause a jittery appearance in the snow buffer due to the size of the snowflake glyph.  For example, /Fantasque Sans Mono/ has this problem, but other fonts, like /Hack/, work perfectly.  If you notice this problem, customize the ~snow-flake~ face and change its font family to, e.g. /DejaVu Sans Mono/.  It may also be necessary to set its height attribute to, e.g. 90.
+
 * Tips
 
 +  Use ~M-x customize-group RET snow RET~ to customize options.

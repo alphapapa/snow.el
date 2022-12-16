@@ -177,6 +177,12 @@ snow, displayed with these characters."
   "Maximum wind velocity."
   :type 'float)
 
+(defface snow-flake '((t :inherit default))
+  "Face used for snowflakes.
+Certain fonts may cause a jittery appearance due to the size of
+the snowflake glyph.  If you notice this problem, try changing
+the font used for this face.")
+
 ;;;; Commands
 
 ;;;###autoload
@@ -263,7 +269,7 @@ prefix), advance snow frames manually by pressing \"SPC\"."
                 ((pred (< 50)) "*")
                 ((pred (< 10)) ".")
                 (_ "."))
-              'face (list :foreground (snow-flake-color mass))))
+              'face (list :inherit 'snow-flake :foreground (snow-flake-color mass))))
 
 (defsubst snow-flake-within-sides-p (flake)
   "Return non-nil if FLAKE is within window's sides."
