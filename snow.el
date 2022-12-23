@@ -89,6 +89,13 @@
 The lower the number, the faster snow will accumulate."
   :type 'number)
 
+(defcustom snow-flake-land-chance 0.25
+  "Chance of a flake landing on a terrain background feature.
+When a flake encounters a position occupied by a terrain
+background feature, it may land on it or pass in front of it,
+depending on this probability."
+  :type 'boolean)
+
 (defcustom snow-show-background t
   "Show the `snow-backgrounds' scene."
   :type 'boolean)
@@ -308,7 +315,8 @@ prefix), advance snow frames manually by pressing \"SPC\"."
       (when-let ((pos-below (when (snow-flake-within-sides-p flake)
                               (snow-flake-pos-below flake))))
         ;; A position exists below the flake and within the buffer.
-        (when (not (equal ?  (char-after pos-below)))
+        (when (and (not (equal ?  (char-after pos-below)))
+                   (>= snow-flake-land-chance (cl-random 1.0)))
           ;; That position is not empty (i.e. not a space): return that position.
           pos-below))))
 
