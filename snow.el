@@ -303,7 +303,8 @@ prefix), advance snow frames manually by pressing \"SPC\"."
         (point)))))
 
 (defsubst snow-flake-landed-at (flake)
-  "Return buffer position FLAKE landed at, or t if outside buffer."
+  "Return buffer position FLAKE landed at.
+Or return t if outside buffer, or nil if it didn't land."
   ;; FIXME: Eventually use full height rather than one less.
   (or (when (>= (snow-flake-y flake) (1- snow-window-height))
         ;; Flake hit bottom of buffer.
@@ -315,10 +316,16 @@ prefix), advance snow frames manually by pressing \"SPC\"."
       (when-let ((pos-below (when (snow-flake-within-sides-p flake)
                               (snow-flake-pos-below flake))))
         ;; A position exists below the flake and within the buffer.
-        (when (and (not (equal ?  (char-after pos-below)))
-                   (>= snow-flake-land-chance (cl-random 1.0)))
-          ;; That position is not empty (i.e. not a space): return that position.
-          pos-below))))
+        (cond ((equal (char-to-string (char-after pos-below))
+                      (cdar (last snow-pile-strings)))
+               ;; The flake landed on a full pile: return its current
+               ;; position.
+               (snow-flake-pos flake))
+              ((and (not (equal ?  (char-after pos-below)))
+                    (>= snow-flake-land-chance (cl-random 1.0)))
+               ;; The flake is above a non-empty position and chanced
+               ;; to land on it: return the position below it.
+               pos-below)))))
 
 (defun snow--update-buffer (buffer)
   "Update snow in BUFFER."
