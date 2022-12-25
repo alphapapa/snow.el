@@ -190,6 +190,9 @@ Certain fonts may cause a jittery appearance due to the size of
 the snowflake glyph.  If you notice this problem, try changing
 the font used for this face.")
 
+(defvar snow-pile-full-char nil
+  "Character that represents a full snow pile at a position.")
+
 ;;;; Commands
 
 ;;;###autoload
@@ -223,6 +226,7 @@ prefix), advance snow frames manually by pressing \"SPC\"."
                                 (window-text-width (get-buffer-window (current-buffer) t)))
             ;; FIXME: Assumes that the backgrounds are less than the window height.
             snow-window-height (window-text-height (get-buffer-window (current-buffer) t))
+            snow-pile-full-char (string-to-char (cdar (last snow-pile-strings)))
             snow-flakes nil
             snow-storm-factor (cl-etypecase snow-storm-initial-factor
                                 (function (funcall snow-storm-initial-factor))
@@ -316,16 +320,16 @@ Or return t if outside buffer, or nil if it didn't land."
       (when-let ((pos-below (when (snow-flake-within-sides-p flake)
                               (snow-flake-pos-below flake))))
         ;; A position exists below the flake and within the buffer.
-        (cond ((equal (char-to-string (char-after pos-below))
-                      (cdar (last snow-pile-strings)))
-               ;; The flake landed on a full pile: return its current
-               ;; position.
-               (snow-flake-pos flake))
-              ((and (not (equal ?  (char-after pos-below)))
-                    (>= snow-flake-land-chance (cl-random 1.0)))
-               ;; The flake is above a non-empty position and chanced
-               ;; to land on it: return the position below it.
-               pos-below)))))
+        (let ((char-below (char-after pos-below)))
+          (cond ((equal snow-pile-full-char char-below)
+                 ;; The flake landed on a full pile: return its current
+                 ;; position.
+                 (snow-flake-pos flake))
+                ((and (not (equal ?  char-below))
+                      (>= snow-flake-land-chance (cl-random 1.0)))
+                 ;; The flake is above a non-empty position and chanced
+                 ;; to land on it: return the position below it.
+                 pos-below))))))
 
 (defun snow--update-buffer (buffer)
   "Update snow in BUFFER."
