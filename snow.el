@@ -89,12 +89,21 @@
 The lower the number, the faster snow will accumulate."
   :type 'number)
 
-(defcustom snow-flake-land-chance 0.25
+(defcustom snow-flake-land-chance 1.0
   "Chance of a flake landing on a terrain background feature.
-When a flake encounters a position occupied by a terrain
-background feature, it may land on it or pass in front of it,
-depending on this probability."
-  :type 'boolean)
+A number from 0 to 1.  When a flake encounters a position
+occupied by a terrain background feature, it may land on it or
+pass in front of it, depending on this probability.
+
+Setting this to 1 prevents flakes from landing on terrain
+objects' interiors (from a 2D perspective), so they will only
+land on their edges.  A lower value (e.g. 0.25 seems good) allows
+flakes to land anywhere on a terrain object (e.g. the entire tree
+can be covered in snow, not just the outer edges).
+
+This feature is currently in development (a minor bug remains to
+be fixed), so the value is left at 1.0 by default."
+  :type 'float)
 
 (defcustom snow-show-background t
   "Show the `snow-backgrounds' scene."
